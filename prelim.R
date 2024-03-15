@@ -3,6 +3,8 @@
 ## 13 March 2024
 
 library(readxl)
+library(hillR)
+library(ggplot2)
 
 # load the data
 dat <- read_excel("PNR Raw Data/PNR2022_InvertebrateCommunity.xlsx", sheet = 2)
@@ -39,6 +41,24 @@ boxplot(dat3$rich ~ Treatment, data = dat3)
 stripchart(dat3$rich ~ Treatment, data = dat3, pch = 19, add = TRUE,
            vertical = TRUE, method = "jitter", jitter = 0.2)
 
+#Create a species accumulation curve:
+forest_july <- dat3[dat3$Treatment=="F",]
+wind_july <- dat3[dat3$Treatment=="W",]
+salvage_july <- dat3[dat3$Treatment=="S",]
+sp.forest_july <- specaccum(forest_july[13:50], method = "rarefaction", permutations = 100, gamma = "jack2")
+sp.wind_july <- specaccum(wind_july[13:50], method = "rarefaction", permutations = 100, gamma = "jack2")
+sp.salvage_july <- specaccum(salvage_july[13:50], method = "rarefaction", permutations = 100, gamma = "jack2")
+
+plot(sp.forest_july, col = "#481567FF", xvar = c("individuals"), lty = 4, lwd = 4,
+     ylab = "Species Richness", xlab = "Number of Individuals", xlim = c(0, 150), ylim = c(0, 25))
+plot(sp.wind_july, add = TRUE, xvar = c("individuals"), lty = 1, lwd = 4, col = "#FDE725FF")
+plot(sp.salvage_july, add = TRUE, xvar = c("individuals"), lty = 2, lwd = 4, col = "#73D055FF")
+
+legend("bottomright", legend = c("Forest", "Tornado", "Salvaged"),
+       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 1, bty = "n", lwd = 4,
+       col = c("#481567FF", "#FDE725FF", "#73D055FF"))
+
+
 # Shannon diversity
 dat3$div <- hill_taxa(dat3[,13:49], q = 1, MARGIN = 1)
 
@@ -47,6 +67,7 @@ hist(dat3$div)
 boxplot(dat3$div ~ Treatment, data = dat3)
 stripchart(dat3$div ~ Treatment, data = dat3, pch = 19, add = TRUE,
            vertical = TRUE, method = "jitter", jitter = 0.2)
+
 
 # now let's assess species composition
 # let's try presence/absence
@@ -60,6 +81,7 @@ dat4$Treatment <- dat3$Treatment
 str(dat4)
 summary(dat4)
 
+#remove columns (aka species) which weren't found at all in july
 dat5 <- dat4[, colSums(dat4 !=0) > 0]
 colSums(dat5[,1:23])
 
@@ -75,3 +97,5 @@ points(nmds, dis = "sites", select = which(dat5$Treatment=="F"), pch = 17, cex =
 points(nmds, dis = "sites", select = which(dat5$Treatment=="W"), pch = 18, cex = 2, col = "#481567FF")
 points(nmds, dis = "sites", select = which(dat5$Treatment=="S"), pch = 15, cex = 2, col = "#2D708EFF")
 orditorp(nmds, "sites")
+
+
