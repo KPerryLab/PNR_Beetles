@@ -1,13 +1,14 @@
 ## Preliminary ground beetle analysis
 ## Powdermill Nature Reserve 2022
 ## 13 March 2024
+# Written by Kayla Perry, edited or modified by Aaron Tayal
 
 library(readxl)
 library(hillR)
 library(ggplot2)
 
 # load the data
-dat <- read_excel("PNR Raw Data/PNR2022_InvertebrateCommunity.xlsx", sheet = 2)
+dat <- read_excel("PNR_Raw_Data/PNR2022_InvertebrateCommunity.xlsx", sheet = 2)
 
 # let's focus on data from July
 # pull out the intervals we want and create a new data frame
