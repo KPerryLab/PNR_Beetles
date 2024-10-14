@@ -57,9 +57,12 @@ ggplot(data=carab, mapping=aes(x=Collection_interval, y=Total_Carabidae_from_sum
 trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
                            colClasses = c("integer", "integer", "factor", "factor", "factor", "numeric", "numeric"))
 
+#Remove rows with missing carabid count#########################################
+# Note: 7 rows have missing carabid count
+carab_no_missing <- carab %>% filter(!is.na(carab[,carab_species[1]]))
 
-############################################################################################################
-## taxonomic diversity metrics
+#taxonomic diversity metrics###################################################
+
 
 str(carab)
 carab$Treatment <- as.factor(carab$Treatment)
@@ -119,21 +122,23 @@ boxplot(eve$HillEven ~ Treatment, data = carab,
 stripchart(eve$HillEven ~ Treatment, data = carab, pch = 19, add = TRUE,
            vertical = TRUE, method = "jitter", jitter = 0.2)
 
-##################################################################################################################
-## Estimate species richness with accumulation curves
+#Estimate species richness with accumulation curves#####################################################################
+## 
 # individual-based rarefaction by treatment, jackknife estimates by treatment
 # we are separating out each treatment so we can get a species accumulation curve for each, and then we will graph it
 
-levels(carab$Treatment)
-TF <- carab[which(carab$Treatment == "F"),]
-TS <- carab[which(carab$Treatment == "S"),]
-TW <- carab[which(carab$Treatment == "W"),]
+# Note (Aaron): I substituted the dataframe where missing carabid rows are removed:
+
+levels(carab_no_missing$Treatment)
+TF <- carab_no_missing[which(carab_no_missing$Treatment == "F"),]
+TS <- carab_no_missing[which(carab_no_missing$Treatment == "S"),]
+TW <- carab_no_missing[which(carab_no_missing$Treatment == "W"),]
 
 # the rarefaction method standardizes the sample sizes so that we are comparing species richness
 # at equivalent abundances
 library(vegan)
 
-sp.TF <- specaccum(TF[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2") # the NAs are the issue, I think
+sp.TF <- specaccum(TF[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2") 
 sp.TS <- specaccum(TS[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2")
 sp.TW <- specaccum(TW[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2")
 
@@ -176,8 +181,8 @@ jack2(TS[,15:60], taxa.row = FALSE, abund = TRUE)
 jack1(TW[,15:60], taxa.row = FALSE, abund = TRUE)
 jack2(TW[,15:60], taxa.row = FALSE, abund = TRUE)
 
-########################################################################################################################
-## Nonmetric multidimensional scaling (NMDS)
+
+#Nonmetric multidimensional scaling (NMDS)#####################################
 # compute a dissimilarity matrix
 # the method option let's you indicate which dissimilarity metric to calculate
 # will calculate the a bray-curtis dissimilarity matrix for abundance-based data
@@ -216,3 +221,4 @@ anova(c.beta)
 plot(c.beta)
 boxplot(c.beta, ylab = "Distance to median")
 TukeyHSD(c.beta, which = "group", conf.level = 0.95)
+
