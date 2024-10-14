@@ -58,3 +58,161 @@ trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_Pitfall
                            colClasses = c("integer", "integer", "factor", "factor", "factor", "numeric", "numeric"))
 
 
+############################################################################################################
+## taxonomic diversity metrics
+
+str(carab)
+carab$Treatment <- as.factor(carab$Treatment)
+
+library(hillR)
+
+## total abundance
+carab$abund <- rowSums(carab[,15:60])
+str(carab)
+hist(carab$abund)
+boxplot(abund ~ Treatment, data = carab,
+        xlab = "", ylab = "Ground beetle Abundance")
+stripchart(abund ~ Treatment, data = carab, pch = 19, add = TRUE,
+           vertical = TRUE, method = "jitter", jitter = 0.2)
+
+
+## Hill Numbers
+# q = 0 (default) to get species richness, q = 1 to get shannon entropy,
+# q = 2 will give inverse Simpson.
+# margin 1 is the default, indicates that sites are rows
+
+# species richness
+carab$rich <- hill_taxa(carab[,15:60], q = 0, MARGIN = 1)
+str(carab)
+hist(carab$rich)
+boxplot(rich ~ Treatment, data = carab,
+        xlab = "", ylab = "Ground beetle Richness")
+stripchart(rich ~ Treatment, data = carab, pch = 19, add = TRUE,
+           vertical = TRUE, method = "jitter", jitter = 0.2)
+
+# Shannon diversity
+carab$sha.div <- hill_taxa(carab[,15:60], q = 1, MARGIN = 1)
+str(carab)
+hist(carab$sha.div)
+boxplot(sha.div ~ Treatment, data = carab,
+        xlab = "", ylab = "Ground beetle Shannon Diversity")
+stripchart(sha.div ~ Treatment, data = carab, pch = 19, add = TRUE,
+           vertical = TRUE, method = "jitter", jitter = 0.2)
+
+# Simpson diversity
+carab$sim.div <- hill_taxa(carab[,15:60], q = 2, MARGIN = 1)
+str(carab)
+hist(carab$sim.div)
+boxplot(sim.div ~ Treatment, data = carab,
+        xlab = "", ylab = "Ground beetle Simpson Diversity")
+stripchart(sim.div ~ Treatment, data = carab, pch = 19, add = TRUE,
+           vertical = TRUE, method = "jitter", jitter = 0.2)
+
+# evenness
+library(chemodiv)
+#  For q = 2, more weight is put on compounds with high proportions
+carab$eve <- calcDiv(carab[,15:60], type = "HillEven", q = 2)
+str(carab)
+hist(carab$eve$HillEven)
+boxplot(eve$HillEven ~ Treatment, data = carab,
+        xlab = "", ylab = "Ground beetle Evenness")
+stripchart(eve$HillEven ~ Treatment, data = carab, pch = 19, add = TRUE,
+           vertical = TRUE, method = "jitter", jitter = 0.2)
+
+##################################################################################################################
+## Estimate species richness with accumulation curves
+# individual-based rarefaction by treatment, jackknife estimates by treatment
+# we are separating out each treatment so we can get a species accumulation curve for each, and then we will graph it
+
+levels(carab$Treatment)
+TF <- carab[which(carab$Treatment == "F"),]
+TS <- carab[which(carab$Treatment == "S"),]
+TW <- carab[which(carab$Treatment == "W"),]
+
+# the rarefaction method standardizes the sample sizes so that we are comparing species richness
+# at equivalent abundances
+library(vegan)
+
+sp.TF <- specaccum(TF[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2") # the NAs are the issue, I think
+sp.TS <- specaccum(TS[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2")
+sp.TW <- specaccum(TW[,15:60], method = "rarefaction", permutations = 100, gamma = "jack2")
+
+
+# make the plot
+
+png("Rarefaction.png", width = 1200, height = 1000, pointsize = 30)
+
+par(mfrow=c(1,1))
+par(mar=c(5,6,4,2))
+
+plot(sp.TS, pch = 19, col = "brown4", xvar = c("individuals"), lty = 4, lwd = 5,
+     ylab = "Species Richness", xlab = "Number of Individuals", xlim = c(0, 300), ylim = c(0, 40))
+plot(sp.TF, add = TRUE, pch = 15, xvar = c("individuals"), lty = 1, lwd = 5, col = "palegreen4")
+plot(sp.TW, add = TRUE, pch = 4, xvar = c("individuals"), lty = 2, lwd = 5, col = "goldenrod2")
+
+legend("bottomright", legend = c("Salvaged", "Forest", "Windthrow"),
+       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 1.2, bty = "n", lwd = 5,
+       col = c("brown4", "palegreen3", "goldenrod2"))
+
+dev.off()
+
+
+## calculates the estimated species richness of a population using first- and second-order jackknife estimators
+# first-order jackknife estimates are based on the number of singletons
+# second-order jackknife estimates are based on the number of singletons and doubletons
+library(fossil)
+
+specnumber(carab[,15:60], groups = carab$Treatment)
+
+# forest
+jack1(TF[,15:60], taxa.row = FALSE, abund = TRUE)
+jack2(TF[,15:60], taxa.row = FALSE, abund = TRUE)
+
+# salvaged
+jack1(TS[,15:60], taxa.row = FALSE, abund = TRUE)
+jack2(TS[,15:60], taxa.row = FALSE, abund = TRUE)
+
+# windthrow
+jack1(TW[,15:60], taxa.row = FALSE, abund = TRUE)
+jack2(TW[,15:60], taxa.row = FALSE, abund = TRUE)
+
+########################################################################################################################
+## Nonmetric multidimensional scaling (NMDS)
+# compute a dissimilarity matrix
+# the method option let's you indicate which dissimilarity metric to calculate
+# will calculate the a bray-curtis dissimilarity matrix for abundance-based data
+dis.matrix <- vegdist(carab[,15:60], method = "bray")
+dis.matrix
+
+# run the nonmetric multidimensional scaling model
+nmds.carabid <- metaMDS(dis.matrix, trymax = 500, autotransform = TRUE, k = 2)
+nmds.carabid # stress is quality of fit
+stressplot(nmds.carabid)
+plot(nmds.carabid) # basic plot with no treatment distinctions
+
+# plot the NMDS model by treatment
+ordiplot(nmds.carabid, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-1, 1))
+points(nmds.carabid, dis = "sites", select = which(carab$Treatment=="W"), pch = 15, cex = 2, col = "goldenrod2")
+points(nmds.carabid, dis = "sites", select = which(carab$Treatment=="F"), pch = 16, cex = 2, col = "palegreen4")
+points(nmds.carabid, dis = "sites", select = which(carab$Treatment=="S"), pch = 16, cex = 2, col = "brown4")
+
+ordiellipse(nmds.carabid, carab$Treatment, draw = "lines", col = c("goldenrod2", "palegreen4", "brown4"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+
+legend("bottomright", legend = c("Windthrow", "Forest", Salvaged),
+       pch = c(15, 16), cex = 1.5, bty = "n", col = c("goldenrod2", "palegreen4", "brown4"))
+
+## Test for differences in ant composition among treatments
+# PERMANOVA tests whether the group centroid of communities differs among groups
+# in multivariate space (e.g. different community composition)
+adonis2(dis.matrix ~ carab$Treatment, permutations = 999)
+
+# BETADISPER tests whether the dispersion of a group from its spatial median is different
+# between groups (i.e. species redundancy across space)
+# analysis of multivariate homogeneity of group dispersions (variances)
+# multivariate analogue of Levene's test for homogeneity of variances
+c.beta <- betadisper(dis.matrix, carab$Treatment, type = c("median"))
+anova(c.beta)
+plot(c.beta)
+boxplot(c.beta, ylab = "Distance to median")
+TukeyHSD(c.beta, which = "group", conf.level = 0.95)
