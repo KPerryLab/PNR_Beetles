@@ -6,83 +6,112 @@
 library(ggplot2)
 library(dplyr)
 
+# Import data #################################################################
+
 # Import the carabid counts into the dataframe "carab". I would like to keep
 # all column classes as character, because in the csv, blank cells in a species 
 # column indicate true zeros, whereas "NA" indicates the trap contents were
 # lost or destroyed by raccoons.
-carab <- read.csv("Aaron_PNR_formatted_csvs/PNR2022_carabid_counts.csv",
+carab0 <- read.csv("Aaron_PNR_formatted_csvs/PNR2022_carabid_counts.csv",
                   na.strings = "NA", colClasses = "character")
 
-sum(is.na(carab)) # Looks like we have 336 NA values. These are due to 
+sum(is.na(carab0)) # Looks like we have 336 NA values. These are due to 
 # 7 rows * 48 columns where the NA values occur.
-carab[is.na(carab$Agonum_fidele), 1:3] # This lists the samples that are missing
+carab0[is.na(carab0$Agonum_fidele), 3:4] # This lists the samples that are missing
 # for various reasons (raccoons, mislabelling, misplacing vial)
 
-carab_species <- colnames(carab)[which(colnames(carab)=="Agonum_fidele"):dim(carab)[2]] 
+carab_species <- colnames(carab0)[which(colnames(carab0)=="Agonum_fidele"):dim(carab0)[2]] 
 # This creates a vector containing the names of the carabid species.
 
 # Now I want to replace blank cells with zeros for the species count columns.
 # To do this, iterate over species and over rows, and only write a zero in 
 # the column if there is currently a blank value "" and not if there is NA
 for (species in carab_species) {
-  for (row in 1:nrow(carab)){
-    if (carab[row, species] == "" && !is.na(carab[row, species])){
-      carab[row, species] <- "0"
+  for (row in 1:nrow(carab0)){
+    if (carab0[row, species] == "" && !is.na(carab0[row, species])){
+      carab0[row, species] <- "0"
     }
   }
 }
 
 # Now change the column classes to integers:
 for (species in carab_species) {
-  carab[,species] <- as.integer(carab[,species])
+  carab0[,species] <- as.integer(carab0[,species])
 }
-carab$Total_Carabidae_during_pinning <- as.integer(carab$Total_Carabidae_during_pinning)
-carab$Total_Carabidae_from_sum_of_species_counts <- as.integer(carab$Total_Carabidae_from_sum_of_species_counts)
+carab0$Total_Carabidae_during_pinning <- as.integer(carab0$Total_Carabidae_during_pinning)
+carab0$Total_Carabidae_from_sum_of_species_counts <- as.integer(carab0$Total_Carabidae_from_sum_of_species_counts)
 
 # Change the columns that indicate collection interval and trap location into 
 # factors
-carab$Collection_interval <- as.factor(carab$Collection_interval)
-carab$PNR_Code <- as.factor(carab$PNR_Code)
+carab0$Collection_interval <- as.factor(carab0$Collection_interval)
+carab0$Plot <- as.factor(carab0$Plot)
 
 # Graph the number of carabids captured, with trap location in the x-axis:
-ggplot(data=carab, mapping=aes(x=PNR_Code, y=Total_Carabidae_from_sum_of_species_counts)) +
+ggplot(data=carab0, mapping=aes(x=Plot, y=Total_Carabidae_from_sum_of_species_counts)) +
   geom_violin(alpha=0.4) +
   theme_classic()
 # Now with collection interval on the x-axis:
-ggplot(data=carab, mapping=aes(x=Collection_interval, y=Total_Carabidae_from_sum_of_species_counts)) +
-  geom_violin(alpha=0.4) +
+ggplot(data=carab0, mapping=aes(x=Collection_interval, y=Total_Carabidae_from_sum_of_species_counts)) +
+  geom_violin() +
+  geom_jitter(height=0, width=0.1, alpha=0.5) +
   theme_classic()
 
 # Import information about the trap locations, such as transect and area:
 trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
-                           colClasses = c("integer", "integer", "factor", "factor", "factor", "numeric", "numeric"))
+                           colClasses = c("factor", "integer", "factor", "factor", "factor", "numeric", "numeric"))
 
-#Remove rows with missing carabid count#########################################
-# Note: 7 rows have missing carabid count
-carab_no_missing <- carab %>% filter(!is.na(carab[,carab_species[1]]))
+# Merge the carab dataframe with the trap_locations dataframe:
+carab <- right_join(trap_locations, carab0, by="Plot") %>% arrange(Collection_interval)
+table(carab$Plot)
+table(carab$Collection_interval)
 
-#taxonomic diversity metrics###################################################
+# Deal with missing data and dumped traps ######################################
+
+# Adjust carabid counts based on dumped traps. Each pitfall has two collection 
+# cups, and sometimes one or both of those cups was dumped. 2/2 cups were dumped
+# four times (resulting in missing data). 1/2 cups were dumped 12 times (1 of
+# those 12 is also missing data due to losing the vial):
+carab[carab$Traps_Dumped_copied_from_PNR_ENV_2022 == 1, c("Plot", 
+                                                          "Collection_interval",
+                                                          "Total_Carabidae_from_sum_of_species_counts")]
+# As you can see, more traps got dumped in the earlier collection intervals.
+# To try and adjust the carabid counts for the dumped cups, I will multiply
+# by 2 the counts of those rows where 1 out of 2 cups were dumped.
+carab1 <- carab
+carab1[carab$Traps_Dumped_copied_from_PNR_ENV_2022 == 1, 
+           c("Total_Carabidae_from_sum_of_species_counts", carab_species)] <- 
+  carab[carab$Traps_Dumped_copied_from_PNR_ENV_2022 == 1, 
+            c("Total_Carabidae_from_sum_of_species_counts", carab_species)] * 2
+# Now, the dataframe carab1 has adjusted carabid counts for those samples where
+# 1 of the 2 cups was dumped:
+carab1$Total_Carabidae_from_sum_of_species_counts - carab$Total_Carabidae_from_sum_of_species_counts
+
+# Remove rows with missing carabid count (Some analyses require these rows to be 
+# removed). Note: 7 rows have missing carabid count
+carab1_no_missing <- carab1 %>% filter(!is.na(carab1[,carab_species[1]]))
+
+# Pool across sample intervals #################################################
 
 
-str(carab)
-carab$Treatment <- as.factor(carab$Treatment)
+# Taxonomic diversity metrics ##################################################
 
 library(hillR)
 
-## total abundance
-carab$abund <- rowSums(carab[,15:60])
-str(carab)
-hist(carab$abund)
-boxplot(abund ~ Treatment, data = carab,
+# Total abundance:
+carab1$abundance <- rowSums(carab1[,carab_species])
+all.equal(carab1$abundance, carab1$Total_Carabidae_from_sum_of_species_counts)
+# Good, the carabid abundances are matching what I had in the spreadsheet
+hist(carab1$abundance)
+boxplot(abundance ~ Treatment, data = carab1,
         xlab = "", ylab = "Ground beetle Abundance")
-stripchart(abund ~ Treatment, data = carab, pch = 19, add = TRUE,
+stripchart(abundance ~ Treatment, data = carab1, pch = 19, add = TRUE,
            vertical = TRUE, method = "jitter", jitter = 0.2)
 
-
-## Hill Numbers
-# q = 0 (default) to get species richness, q = 1 to get shannon entropy,
+# Hill Numbers
+# q = 0 (default) to get species richness, 
+# q = 1 to get shannon entropy,
 # q = 2 will give inverse Simpson.
-# margin 1 is the default, indicates that sites are rows
+# MARGIN = 1 is the default, indicates that sites are rows
 
 # species richness
 carab$rich <- hill_taxa(carab[,15:60], q = 0, MARGIN = 1)
