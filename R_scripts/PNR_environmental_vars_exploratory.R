@@ -48,7 +48,8 @@ x_values <- -25:125
 y_values <- dnorm(x_values, overall_mean, sqrt(overall_var))
 histogram <- hist(soil_moisture$percent_Moisture_Avg, plot=FALSE, breaks=20)
 plot(histogram)
-lines(x=x_values, y=1000*y_values)  
+lines(x=x_values, y=1000*y_values)
+qqline(soil_moisture$percent_Moisture_Avg)
 
 # I think a normal distribution fits the data fairly well (subjectively).
 ggplot(data=soil_moisture, aes(x=Treatment, y=percent_Moisture_Avg)) +
