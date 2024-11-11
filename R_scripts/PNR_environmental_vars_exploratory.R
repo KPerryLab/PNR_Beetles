@@ -24,7 +24,7 @@ hist(soil_moisture$percent_MOISTURE3)
 
 ggplot(data=soil_moisture, aes(x=SoilMoisture_day, 
                                y=percent_Moisture_Avg)) +
-  geom_point()
+  geom_point(alpha=0.5) + theme_classic()
 
 # Idea: make a Parallel coordinates plot
 
@@ -32,7 +32,7 @@ ggplot(data=soil_moisture, aes(x=SoilMoisture_day,
 # type (undisturbed, wind-disturbed, or salvage-logged)? How much variation
 # is related to transect? How much variation is related to date of measurement?
 
-# Make sure I can calculate variance:
+# Sidebar: Make sure I can calculate variance:
 example <- c(1,4,9,7,6)
 var(example)
 mean(example)
@@ -74,6 +74,9 @@ soil_moisture_by_plot <- soil_moisture %>% group_by(Plot) %>%
             n_moisture = n())
 ggplot(data=soil_moisture_by_plot, aes(x=Treatment, y=mean_moisture)) +
   geom_jitter(height=0, width=0.1, alpha=0.5)
+# Yes, the pattern still holds that wind-disturbed sites seem more heterogeneous
+# in their soil moisture compared to salvaged sites.
+
 
 
 
