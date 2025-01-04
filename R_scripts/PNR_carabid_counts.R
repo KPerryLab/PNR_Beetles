@@ -48,6 +48,8 @@ carab0$Plot <- as.factor(carab0$Plot)
 carab0$Set_Date <- as.factor(carab0$Set_Date)
 carab0$Collection_Date <- as.factor(carab0$Collection_Date)
 
+carab0 <- carab0 %>% select(-Treatment, -PNR_Code) # get rid of unnecessary columns
+
 # Graph the number of carabids captured, with trap location in the x-axis:
 ggplot(data=carab0, mapping=aes(x=Plot, y=Total_Carabidae_from_sum_of_species_counts)) +
   geom_violin(alpha=0.4) +
@@ -180,7 +182,7 @@ hist(carab2_by_plot$shannon_diversity, breaks=seq(0,15,1))
 ggplot(data=carab2_by_plot, aes(x=Treatment, y=shannon_diversity)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic()
 
-# Simpson diversity (1/D)
+# Simpson diversity: inverse Simpson index (1/D)
 carab2_by_plot$simpson_diversity <- hill_taxa(carab2_by_plot[,carab_species], 
                                               q = 2, MARGIN = 1)
 hist(carab2_by_plot$simpson_diversity, breaks=seq(0,15,1))
@@ -280,7 +282,35 @@ ordiellipse(nmds.carabid, carab2_by_plot$Treatment, draw = "lines", col = c("pal
             lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
 
 legend("topleft", legend = c("Forest", "Salvaged", "Windthrow"),
-       pch = c(15, 16, 17), cex = 0.5, bty = "n", col = c("palegreen4", "brown4", "goldenrod2"))
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("palegreen4", "brown4", "goldenrod2"))
+
+
+# plot the NMDS model by area:
+ordiplot(nmds.carabid, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Area=="northeast"), pch = 15, cex = 1, col = "blue")
+points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Area=="southwest"), pch = 16, cex = 1, col = "purple")
+
+ordiellipse(nmds.carabid, carab2_by_plot$Area, draw = "lines", col = c("blue", "purple"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+
+legend("topleft", legend = c("northeast", "southwest"),
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("blue", "purple"))
+
+# plot the NMDS model with plot 49 highlighted. Exploration of the environmental
+# dataset indicated that plot 49 has a very open canopy, with high ground 
+# vegetation cover and high ground vegetation height
+ordiplot(nmds.carabid, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Plot!=49), pch = 15, cex = 1, col = "black")
+points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Plot==49), pch = 16, cex = 1, col = "red")
+# A quick look at the carabid data shows that plot 49 had the highest captures of 
+# Pterostichus stygicus, Agonum fidele, Anisodactylus nigerrimus, melanopus, and 
+# harrisi, Chlaenius emarginatus, and maybe others (need to investigate more)
+
+# In the paper Perry et al. 2018, Chlaenius emarginatus, Cyclotrachelus sigillatus,
+# and Pterostichus stygicus are found in higher abundance in canopy gaps. This matches
+# with what I'm finding at Plot 49. Additionally, Agonum species are typically
+# indicative of water-saturated soils (source: Larochelle and Lariviere as well
+# as the paper on impacts of EAB on ground beetles)
 
 
 # Test for differences in carabid composition among treatments
@@ -297,4 +327,14 @@ legend("topleft", legend = c("Forest", "Salvaged", "Windthrow"),
 #plot(c.beta)
 #boxplot(c.beta, ylab = "Distance to median")
 #TukeyHSD(c.beta, which = "group", conf.level = 0.95)
+
+# Investigating the most common species ##########################################
+
+# What were the most commonly caught carabids?
+
+colSums(carab2_by_plot[, carab_species])[order(colSums(carab2_by_plot[, carab_species]), decreasing=T)]
+
+
+
+
 
