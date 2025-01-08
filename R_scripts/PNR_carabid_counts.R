@@ -17,11 +17,12 @@ carab0 <- read.csv("Aaron_PNR_formatted_csvs/PNR2022_carabid_counts.csv",
 
 sum(is.na(carab0)) # Looks like we have 336 NA values. These are due to 
 # 7 rows * 48 columns where the NA values occur.
-carab0[is.na(carab0$Agonum_fidele), 3:4] # This lists the samples that are missing
+carab0[is.na(carab0$Agonoleptus_thoracicus), 3:4] # This lists the samples that are missing
 # for various reasons (raccoons, mislabelling, misplacing vial)
 
-carab_species <- colnames(carab0)[which(colnames(carab0)=="Agonum_fidele"):dim(carab0)[2]] 
+carab_species <- colnames(carab0)[which(colnames(carab0)=="Agonoleptus_thoracicus"):dim(carab0)[2]] 
 # This creates a vector containing the names of the carabid species.
+# Note: In the datasheet, Agonoleptus thoracicus MUST BE THE FIRST species column
 
 # Now I want to replace blank cells with zeros for the species count columns.
 # To do this, iterate over species and over rows, and only write a zero in 
