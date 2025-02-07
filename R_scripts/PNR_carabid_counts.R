@@ -59,6 +59,9 @@ ggplot(data=carab0, mapping=aes(x=Plot, y=Total_Carabidae_from_sum_of_species_co
 ggplot(data=carab0, mapping=aes(x=Collection_interval, y=Total_Carabidae_from_sum_of_species_counts)) +
   geom_jitter(height=0, width=0.1, alpha=0.5) +
   theme_classic()
+# Graph a histogram of the number of carabids captured:
+ggplot(data=carab0, mapping=aes(x=Total_Carabidae_from_sum_of_species_counts)) +
+  geom_histogram(breaks=seq(-0.5,23.5,1)) + theme_classic()
 
 # Import information about the trap locations, such as transect and area:
 trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
@@ -84,7 +87,8 @@ carab1[is.na(carab1$Agonum_fidele), c("Collection_interval", "Plot", "Treatment"
 # those 12 is also missing data due to losing the vial):
 carab1[carab1$Traps_Dumped_copied_from_PNR_ENV_2022 == 1, c("Plot", 
                                                           "Collection_interval",
-                                                          "Total_Carabidae_from_sum_of_species_counts")]
+                                                          "Total_Carabidae_from_sum_of_species_counts",
+                                                          "Treatment")]
 # As you can see, more traps got dumped in the earlier collection intervals.
 # To try and adjust the carabid counts for the dumped cups, I will multiply
 # by 2 the counts of those rows where 1 out of 2 cups were dumped.
@@ -134,7 +138,8 @@ days_active$Plot <- as.factor(days_active$Plot)
 # collection intervals.
 
 carab2_by_plot_init <- carab2 %>% group_by(Plot) %>% 
-  summarise(across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
+  summarise(num_nonmissing_intervals = n() - sum(is.na(Agonoleptus_thoracicus)),
+            across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
 
 carab2_by_plot_adding_plot_info <- right_join(trap_locations, 
                                               carab2_by_plot_init, by="Plot")
@@ -143,19 +148,23 @@ carab2_by_plot_adding_days_active <- right_join(days_active, carab2_by_plot_addi
                              by="Plot")
 
 carab2_by_plot <- carab2_by_plot_adding_days_active
+
+days_trap_operational <- carab2_by_plot[,c("Plot", "Treatment", "days_active")]
+#write.csv(days_trap_operational)
+
 # The below code divides abundances of each species at each trap by the days
 # active. However, I commented it out because I'm not sure I want to convert 
 # the count data to fractions.
 #for (species in carab_species) {
 #  carab2_by_plot[,species] <- carab2_by_plot_adding_days_active[,species] / 
 #                              carab2_by_plot_adding_days_active[,"days_active"]
-#}
+#
 
 # Taxonomic diversity metrics ##################################################
 
-library(hillR)
+library(hillR) # A package for computing diversity indices
 
-# Total abundance:
+# Total abundance (***incorporating the adjustment for when 1 cup lost***)
 carab2_by_plot$abundance <- rowSums(carab2_by_plot[,carab_species])
 hist(carab2_by_plot$abundance, breaks=seq(0,100,5)) # The total number of 
 # carabids caught at each Plot across the summer of 2022
@@ -169,30 +178,37 @@ ggplot(data=carab2_by_plot, aes(x=Treatment, y=abundance/days_active)) +
 # q = 2 will give inverse Simpson.
 # MARGIN = 1 is the default, indicates that sites are rows
 
-# species richness
+# species richness (the number of species found at each plot over the season)
+carab2_by_plot$richness_test <- rowSums(carab2_by_plot[,carab_species] > 0)
 carab2_by_plot$richness <- hill_taxa(carab2_by_plot[,carab_species], q = 0, 
                                      MARGIN = 1)
 hist(carab2_by_plot$richness, breaks=seq(0,20,1))
 ggplot(data=carab2_by_plot, aes(x=Treatment, y=richness)) +
-  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic()
+  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() + 
+  ylab("Carabid species richness") + scale_y_continuous(breaks = seq(5,18,1))
 
 # Shannon diversity: exp(H')
 carab2_by_plot$shannon_diversity <- hill_taxa(carab2_by_plot[,carab_species], 
                                               q = 1, MARGIN = 1)
 hist(carab2_by_plot$shannon_diversity, breaks=seq(0,15,1))
 ggplot(data=carab2_by_plot, aes(x=Treatment, y=shannon_diversity)) +
-  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic()
+  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() +
+  ylab("Shannon diversity: exp(H)")
 
 # Simpson diversity: inverse Simpson index (1/D)
 carab2_by_plot$simpson_diversity <- hill_taxa(carab2_by_plot[,carab_species], 
                                               q = 2, MARGIN = 1)
 hist(carab2_by_plot$simpson_diversity, breaks=seq(0,15,1))
 ggplot(data=carab2_by_plot, aes(x=Treatment, y=simpson_diversity)) +
-  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic()
+  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() + 
+  ylab("Inverse Simpson index")
 
 # evenness
 library(chemodiv)
-#  For q = 2, more weight is put on compounds with high proportions (I don't get this)
+#  Equal to the Hill diversity at a value of q, divided by the species richness.
+# Min value is 1/species richness and max value is 1.
+carab2_by_plot$evenness_test <- carab2_by_plot$simpson_diversity / 
+                                                    carab2_by_plot$richness
 carab2_by_plot$evenness <- calcDiv(carab2_by_plot[,carab_species], type = "HillEven", 
                                    q = 2)$HillEven
 hist(carab2_by_plot$evenness)
@@ -211,18 +227,19 @@ TF <- carab2_no_missing[which(carab2_no_missing$Treatment == "Forest"),]
 TS <- carab2_no_missing[which(carab2_no_missing$Treatment == "Salvaged"),]
 TW <- carab2_no_missing[which(carab2_no_missing$Treatment == "Windthrow"),]
 
-# the rarefaction method standardizes the sample sizes so that we are comparing 
+# The rarefaction method standardizes the sample sizes so that we are comparing 
 # species richness at equivalent abundances
 library(vegan)
 
-sp.TF <- specaccum(TF[,carab_species], method = "rarefaction", permutations = 100, gamma = "jack2") 
-sp.TS <- specaccum(TS[,carab_species], method = "rarefaction", permutations = 100, gamma = "jack2")
-sp.TW <- specaccum(TW[,carab_species], method = "rarefaction", permutations = 100, gamma = "jack2")
+sp.TF <- specaccum(TF[,carab_species], method = "rarefaction", 
+                   permutations = 100, gamma = "jack2") 
+sp.TS <- specaccum(TS[,carab_species], method = "rarefaction", 
+                   permutations = 100, gamma = "jack2")
+sp.TW <- specaccum(TW[,carab_species], method = "rarefaction", 
+                   permutations = 100, gamma = "jack2")
 
 
-# make the plot
-
-#png("Rarefaction.png", width = 1200, height = 1000, pointsize = 30)
+# Make the plot using number of individuals on the x-axis:
 
 par(mfrow=c(1,1))
 par(mar=c(5,6,4,2))
@@ -233,11 +250,20 @@ plot(sp.TF, add = TRUE, pch = 15, xvar = c("individuals"), lty = 1, lwd = 2, col
 plot(sp.TW, add = TRUE, pch = 4, xvar = c("individuals"), lty = 2, lwd = 2, col = "goldenrod2")
 
 legend("bottomright", legend = c("Salvaged", "Forest", "Windthrow"),
-       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 1.2, bty = "n", lwd = 5,
+       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 0.8, bty = "n", lwd = 5,
        col = c("brown4", "palegreen3", "goldenrod2"))
 
-#dev.off()
+par(mfrow=c(1,1))
+par(mar=c(5,6,4,2))
 
+plot(sp.TS, pch = 19, col = "brown4", xvar = c("sites"), lty = 4, lwd = 2,
+     ylab = "Species Richness", xlab = "Number of pitfalls", xlim = c(0, 100), ylim = c(0, 40))
+plot(sp.TF, add = TRUE, pch = 15, xvar = c("sites"), lty = 1, lwd = 2, col = "palegreen4")
+plot(sp.TW, add = TRUE, pch = 4, xvar = c("sites"), lty = 2, lwd = 2, col = "goldenrod2")
+
+legend("bottomright", legend = c("Salvaged", "Forest", "Windthrow"),
+       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 0.8, bty = "n", lwd = 5,
+       col = c("brown4", "palegreen3", "goldenrod2"))
 
 # Calculates the estimated species richness of a population using first- and 
 # second-order jackknife estimators
@@ -258,6 +284,19 @@ jack2(TS[,carab_species], taxa.row = FALSE, abund = TRUE)
 # windthrow
 jack1(TW[,carab_species], taxa.row = FALSE, abund = TRUE)
 jack2(TW[,carab_species], taxa.row = FALSE, abund = TRUE)
+
+# Chao1 estimator ##############################################################
+# Below, calculate the Chao1 estimator of species richness, using the SpadeR
+# package:
+
+carab2_by_treatment <- carab2_by_plot %>% group_by(Treatment) %>%
+  summarize(across(all_of(carab_species), ~sum(.)))
+
+forest_counts <-carab2_by_treatment[carab2_by_treatment$Treatment=="Forest", 
+                                    carab_species]
+
+# Undisturbed forest:
+ChaoSpecies(forest_counts, datatype = "abundance", k = 10, conf=0.95)
 
 
 # Nonmetric multidimensional scaling (NMDS) ###################################
