@@ -153,12 +153,14 @@ days_trap_operational <- carab2_by_plot[,c("Plot", "Treatment", "days_active")]
 #write.csv(days_trap_operational)
 
 # The below code divides abundances of each species at each trap by the days
-# active. However, I commented it out because I'm not sure I want to convert 
-# the count data to fractions.
-#for (species in carab_species) {
-#  carab2_by_plot[,species] <- carab2_by_plot_adding_days_active[,species] / 
-#                              carab2_by_plot_adding_days_active[,"days_active"]
-#
+# active. 
+carab2_by_plot_beetles_per_day <- carab2_by_plot # make a new data table for the 
+# standardized values
+for (species in carab_species) {
+  carab2_by_plot_beetles_per_day[,species] <- 
+    carab2_by_plot_adding_days_active[,species] / 
+    carab2_by_plot_adding_days_active[,"days_active"]
+}
 
 # Taxonomic diversity metrics ##################################################
 
@@ -168,9 +170,17 @@ library(hillR) # A package for computing diversity indices
 carab2_by_plot$abundance <- rowSums(carab2_by_plot[,carab_species])
 hist(carab2_by_plot$abundance, breaks=seq(0,100,5)) # The total number of 
 # carabids caught at each Plot across the summer of 2022
-ggplot(data=carab2_by_plot, aes(x=Treatment, y=abundance/days_active)) +
+carab2_by_plot$abundance_per_day <- carab2_by_plot$abundance / 
+  carab2_by_plot$days_active
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=abundance_per_day)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() + ylim(0,0.8)+
   ylab("Ground beetles caught per day") + xlab("Forest disturbance")
+
+# What is the coefficient of variation among the beetles/day at 
+# each plot?
+# (the ratio of the standard deviation to the mean)
+sd(carab2_by_plot$abundance_per_day) / 
+  mean(carab2_by_plot$abundance_per_day) 
 
 # Hill Numbers
 # q = 0 (default) to get species richness, 
@@ -213,7 +223,8 @@ carab2_by_plot$evenness <- calcDiv(carab2_by_plot[,carab_species], type = "HillE
                                    q = 2)$HillEven
 hist(carab2_by_plot$evenness)
 ggplot(data=carab2_by_plot, aes(x=Treatment, y=evenness)) +
-  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic()
+  geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() +
+  ylab("Simpson evenness")
 
 #Estimate species richness with accumulation curves#####################################################################
 
@@ -292,22 +303,60 @@ jack2(TW[,carab_species], taxa.row = FALSE, abund = TRUE)
 carab2_by_treatment <- carab2_by_plot %>% group_by(Treatment) %>%
   summarize(across(all_of(carab_species), ~sum(.)))
 
-forest_counts <-carab2_by_treatment[carab2_by_treatment$Treatment=="Forest", 
+forest_counts <- carab2_by_treatment[carab2_by_treatment$Treatment=="Forest", 
                                     carab_species]
+windthrow_counts <- carab2_by_treatment[carab2_by_treatment$Treatment=="Windthrow", 
+                                        carab_species]
+salvaged_counts <- carab2_by_treatment[carab2_by_treatment$Treatment=="Salvaged", 
+                                       carab_species]
 
+library(SpadeR)
 # Undisturbed forest:
 ChaoSpecies(forest_counts, datatype = "abundance", k = 10, conf=0.95)
 
+# Windthrow:
+ChaoSpecies(windthrow_counts, datatype = "abundance", k = 10, conf=0.95)
 
-# Nonmetric multidimensional scaling (NMDS) ###################################
-# Compute a dissimilarity matrix
-# The method option let's you indicate which dissimilarity metric to calculate
-# We will calculate the bray-curtis dissimilarity matrix for abundance-based data
-dis.matrix <- vegdist(carab2_by_plot[,carab_species], method = "bray")
-dis.matrix
+# Salvaged:
+ChaoSpecies(salvaged_counts, datatype = "abundance", k = 10, conf=0.95)
 
-# Run the nonmetric multidimensional scaling model
-nmds.carabid <- metaMDS(dis.matrix, trymax = 500, autotransform = TRUE, k = 2)
+# Beta-diversity ##############################################################
+# Compute a dissimilarity matrix for abundance-based data
+
+# Note: The dataset I'm using here are counts per day of the different species.
+dis.matrix <- vegdist(carab2_by_plot_beetles_per_day[,carab_species], 
+                      method = "bray") # Bray-Curtis dissimilarity
+dis.matrix 
+max(dis.matrix)
+min(dis.matrix) # The values of the dissimilarity matrix are between 
+# 0.32 and 0.97
+
+# Run the Permutation-based Multivariate Analysis of Variance (test for
+# treatment differences between the centroids of each treatment group in 
+# species space):
+adonis2(dis.matrix ~ carab2_by_plot_beetles_per_day$Treatment, permutations = 999)
+# There are not significant differences in the centroids of each treatment group
+
+# Run the Analysis of Multivariate Homogeneity of Group Dispersions
+# Finds the dispersion of each treatment from its spatial median. Then tests
+# if treatments differ in their dispersions.
+beta_dispersion <- betadisper(d = dis.matrix, 
+                              group = carab2_by_plot_beetles_per_day$Treatment, 
+                              type = c("median"))
+beta_dispersion
+plot(beta_dispersion)
+boxplot(beta_dispersion, ylab = "Distance to median", xlab="")
+anova(beta_dispersion) # The three treatment groups differ in their dispersions
+
+# Note: it would not be surprising if the forest had more dispersion than the 
+# salvage or windthrow, because there were more plots in the forest.
+
+TukeyHSD(beta_dispersion, which = "group", conf.level = 0.95)
+# The windthrow and salvaged treatments do not SIGNIFICANTLY 
+# differ in their dispersion.
+
+# Run the nonmetric multidimensional scaling visualization:
+nmds.carabid <- metaMDS(dis.matrix, trymax = 500, k = 2)
 nmds.carabid # stress is quality of fit
 stressplot(nmds.carabid)
 plot(nmds.carabid) # basic plot with no treatment distinctions
@@ -352,27 +401,23 @@ points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Plot==49), pch
 # indicative of water-saturated soils (source: Larochelle and Lariviere as well
 # as the paper on impacts of EAB on ground beetles)
 
-
-# Test for differences in carabid composition among treatments
-# PERMANOVA tests whether the group centroid of communities differs among groups
-# in multivariate space (e.g. different community composition)
-# adonis2(dis.matrix ~ carab$Treatment, permutations = 999)
-
-# BETADISPER tests whether the dispersion of a group from its spatial median is different
-# between groups (i.e. species redundancy across space)
-# analysis of multivariate homogeneity of group dispersions (variances)
-# multivariate analogue of Levene's test for homogeneity of variances
-#c.beta <- betadisper(dis.matrix, carab$Treatment, type = c("median"))
-#anova(c.beta)
-#plot(c.beta)
-#boxplot(c.beta, ylab = "Distance to median")
-#TukeyHSD(c.beta, which = "group", conf.level = 0.95)
-
 # Investigating the most common species ##########################################
+
+# There were 46 species found in 2022
 
 # What were the most commonly caught carabids?
 
 colSums(carab2_by_plot[, carab_species])[order(colSums(carab2_by_plot[, carab_species]), decreasing=T)]
+# Pterostichus adoxus, Sphaeroderus stenostomus, Pterostichus stygicus were 
+# the three most common
+
+# How many species were common (>= 10 individuals collected) vs rare (< 10 
+# individuals)
+
+sum(colSums(carab2_by_plot[, carab_species]) >= 10) # 15 species
+sum(colSums(carab2_by_plot[, carab_species]) < 10) # 31 species
+
+
 
 
 
