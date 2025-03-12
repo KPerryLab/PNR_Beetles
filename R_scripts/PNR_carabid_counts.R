@@ -226,12 +226,11 @@ ggplot(data=carab2_by_plot, aes(x=Treatment, y=evenness)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) + theme_classic() +
   ylab("Simpson evenness")
 
-#Estimate species richness with accumulation curves#####################################################################
+# Assess sampling effort using accumulation curves #############################
 
 # Individual-based rarefaction by treatment, jackknife estimates by treatment.
-# We are separating out each treatment so we can get a species accumulation curve for each, and then we will graph it
-
-# Note: I substituted the dataframe where missing carabid rows are removed:
+# We are separating out each treatment so we can get a species accumulation curve 
+# for each, and then we will graph it
 
 table(carab2_no_missing$Treatment)
 TF <- carab2_no_missing[which(carab2_no_missing$Treatment == "Forest"),]
@@ -408,18 +407,58 @@ points(nmds.carabid, dis = "sites", select = which(carab2_by_plot$Plot==49), pch
 # What were the most commonly caught carabids?
 
 colSums(carab2_by_plot[, carab_species])[order(colSums(carab2_by_plot[, carab_species]), decreasing=T)]
-# Pterostichus adoxus, Sphaeroderus stenostomus, Pterostichus stygicus were 
-# the three most common
+# Pterostichus adoxus (120), Sphaeroderus stenostomus (115), 
+# Pterostichus stygicus (90), Platynus angustatus (77), Pterostichus tristis (74),
+# Pterostichus lachrymosus (68), 
+# Cyclotrachelus_unknown_likely_sigillatus_or_convivus_or_mixed (54),
+# P. moestus (50), Carabus goryi (43)
 
-# How many species were common (>= 10 individuals collected) vs rare (< 10 
+# How many species were common (>= 30 individuals collected) vs rare (< 30 
 # individuals)
+sum(colSums(carab2_by_plot[, carab_species]) >= 30) # 9 species
+sum(colSums(carab2_by_plot[, carab_species]) < 30) # 37 species
 
-sum(colSums(carab2_by_plot[, carab_species]) >= 10) # 15 species
-sum(colSums(carab2_by_plot[, carab_species]) < 10) # 31 species
+# Graph activity-abundance of Pterostichus adoxus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Pterostichus_adoxus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
 
+# Graph activity-abundance of Sphaeroderus stenostomus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Sphaeroderus_stenostomus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
 
+# Graph activity-abundance of Pterostichus stygicus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Pterostichus_stygicus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
 
+# Graph activity-abundance of Platynus angustatus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Platynus_angustatus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
 
+# Graph activity-abundance of Pterostichus tristis:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Pterostichus_tristis)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
 
+# Graph activity-abundance of Pterostichus lachrymosus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Pterostichus_lachrymosus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
+
+# Graph activity-abundance of Cyclotrachelus_unknown_likely_sigillatus_or_convivus_or_mixed:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Cyclotrachelus_unknown_likely_sigillatus_or_convivus_or_mixed)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
+
+# Graph activity-abundance of Pterostichus moestus:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Pterostichus_moestus)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
+
+# Graph activity-abundance of Carabus goryi:
+ggplot(data=carab2_by_plot, aes(x=Treatment, y=Carabus_goryi)) +
+  geom_jitter(height=0, width=0.1, alpha=0.5)
+
+# Export data table ###########################################################
+
+# Here, I'll write a new csv file with the 24 plots as rows
+
+write.csv(carab2_by_plot, "Aaron_PNR_formatted_csvs/PNR2022_carabids_by_plot.csv",
+          row.names=FALSE)
 
 

@@ -1,16 +1,16 @@
 # Aaron Tayal
 # Sept 24, 2024
-# Exploratory data visualization of environmental variables recorded at 
+# Exploratory data visualization of environmental variables recorded in 2022 at 
 # Powdermill Nature Reserve in the tornado/salvage areas
 
 library(ggplot2)
 library(dplyr)
 library(lubridate)
 
-# Soil moisture ################################################################
+# Soil moisture 2022 ################################################################
 
 soil_moisture_0 <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_Soil_moisture_PNR_ENV_2022.csv")
-soil_moisture_0$SoilMoisture_day <- as.factor(yday(soil_moisture_0$SoilMoisture_Date))
+soil_moisture_0$SoilMoisture_day <- as.factor(ymd(soil_moisture_0$SoilMoisture_Date))
 
 # Information on the transect groups and areas of each trap
 trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
@@ -70,7 +70,7 @@ ggplot(data=soil_moisture_by_plot, aes(x=Treatment, y=mean_moisture)) +
 # Yes, the pattern still holds that wind-disturbed sites seem more heterogeneous
 # in their soil moisture compared to salvaged sites.
 
-# Ground cover #################################################################
+# Ground cover 2022 #################################################################
 
 cover <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_percent_cover_PNR_ENV_2022.csv")
 # It seems that the ground cover was evaluated four times in 2022: in June, 
@@ -78,7 +78,7 @@ cover <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_percent_cover_PNR_EN
 
 cover$Treatment <- as.factor(cover$Treatment)
 cover$Plot <- as.factor(cover$Plot)
-cover$Date <- as.factor(cover$Date)
+cover$Date1 <- (ymd(cover$Date_yyyy.mm.dd))
 cover$day_of_year <- yday(cover$Date_yyyy.mm.dd)
 
 # What happens if you add up all the cover values?
@@ -163,7 +163,7 @@ ggplot(data=cover_by_plot, aes(x=Treatment, y=CWDAvg)) +
 ggplot(data=cover_by_plot, aes(x=Treatment, y=RockAvg)) +
   geom_jitter(alpha=0.5, width=0.05, height=0) 
 
-# Vegetation height ##############################################
+# Vegetation height 2022 ##############################################
 
 # Did vegetation height increase over the growing season?
 ggplot(data=cover, aes(x=day_of_year, y=VegHtAvg)) +
@@ -180,7 +180,7 @@ ggplot(data=cover_by_plot, aes(x=Treatment, y=VegHtAvg)) +
 # Some of the windthrow plots seem to have taller vegetation than the 
 # salvaged or forest plots
 
-# Canopy openness #############################################################
+# Canopy openness 2022 #############################################################
 
 densi <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_canopy_openness_PNR_ENV_2022.csv")
 densi$Treatment <- as.factor(densi$Treatment)
@@ -194,7 +194,38 @@ ggplot(data=densi, aes(x=Treatment, y=Densi.Total)) +
   geom_jitter(alpha=0.5, width=0.05, height=0) +
   ylim(0,20)
 # Also, some of the other salvaged and windthrow plots have slightly
-# higher canopy openness than all the other forest plots
+# higher canopy openness than all the other forest plots. But it seems like 
+# differences in canopy openness have largely disappeared.
+
+# Soil moisture 2015 ###########################################################
+library(readxl)
+soil_moisture_temp_2015_0 <- read_excel("PNR_Raw_Data/PNR_EnvironmentalData.xlsx", 
+                                      sheet = 9)
+# IMPORTANT NOTE: It appears that soil moisture was measured at plot 65 instead
+# of plot 63. Looking at the map shows 65 is a short distance away from 63 and 
+# also in the Windthrow treatment
+
+soil_moisture_temp_2015 <- soil_moisture_temp_2015_0 %>% 
+  filter(Quadrat >= 41 & Quadrat <= 65) %>% select(-"Block ID")
+# Looks like soil moisture was taken at 6 time points
+
+soil_moisture_temp_2015$SoilMoist1 <- as.numeric(soil_moisture_temp_2015$SoilMoist1)
+# SoilMoist1 has some amount of missing data esp. towards end of summer
+
+soil_moisture_temp_2015 %>% mutate(SoilMoistAvrg = rowMeans(SoilMoist1, SoilMoist2, 
+                                                        SoilMoist3, na.rm=T))
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^ having trouble
+
+                                              
+
+# Ground cover 2015 ############################################################
+
+# Vegetation height 2015 #######################################################
+
+# Canopy openness 2015 #########################################################
+
+
+
 
 
 
