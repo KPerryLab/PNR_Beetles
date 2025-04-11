@@ -9,12 +9,12 @@ library(lubridate)
 
 # Soil moisture 2022 ################################################################
 
-soil_moisture_0 <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_Soil_moisture_PNR_ENV_2022.csv")
+soil_moisture_0 <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_Soil_moisture_PNR_ENV_2022.csv")
 soil_moisture_0$SoilMoisture_day <- as.factor(ymd(soil_moisture_0$SoilMoisture_Date))
 
 # Information on the transect groups and areas of each trap
-trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
-                           colClasses = c("integer", "integer", "factor", "factor", "factor", "numeric", "numeric"))
+trap_locations <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
+                           colClasses = c("integer", "integer", "factor", "factor", "factor", "numeric", "numeric", "numeric", "numeric"))
 soil_moisture <- right_join(trap_locations, soil_moisture_0, by="Plot")
 
 summary(soil_moisture)
@@ -72,7 +72,7 @@ ggplot(data=soil_moisture_by_plot, aes(x=Treatment, y=mean_moisture)) +
 
 # Ground cover 2022 #################################################################
 
-cover <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_percent_cover_PNR_ENV_2022.csv")
+cover <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_percent_cover_PNR_ENV_2022.csv")
 # It seems that the ground cover was evaluated four times in 2022: in June, 
 # July, August, and September
 
@@ -182,7 +182,7 @@ ggplot(data=cover_by_plot, aes(x=Treatment, y=VegHtAvg)) +
 
 # Canopy openness 2022 #############################################################
 
-densi <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_canopy_openness_PNR_ENV_2022.csv")
+densi <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_canopy_openness_PNR_ENV_2022.csv")
 densi$Treatment <- as.factor(densi$Treatment)
 
 # How does canopy openness vary by treatment?

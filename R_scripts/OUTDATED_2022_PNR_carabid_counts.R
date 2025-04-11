@@ -12,7 +12,7 @@ library(dplyr)
 # all column classes as character, because in the csv, blank cells in a species 
 # column indicate true zeros, whereas "NA" indicates the trap contents were
 # lost or destroyed by raccoons.
-carab0 <- read.csv("Aaron_PNR_formatted_csvs/PNR2022_carabid_counts.csv",
+carab0 <- read.csv("Aaron_PNR_formatted_data/PNR2022_carabid_counts.csv",
                   na.strings = "NA", colClasses = "character")
 
 sum(is.na(carab0)) # Looks like we have 336 NA values. These are due to 
@@ -46,8 +46,8 @@ carab0$Total_Carabidae_from_sum_of_species_counts <- as.integer(carab0$Total_Car
 # factors
 carab0$Collection_interval <- as.factor(carab0$Collection_interval)
 carab0$Plot <- as.factor(carab0$Plot)
-carab0$Set_Date <- as.factor(carab0$Set_Date)
-carab0$Collection_Date <- as.factor(carab0$Collection_Date)
+carab0$Set_date <- as.factor(carab0$Set_date)
+carab0$Collection_date <- as.factor(carab0$Collection_date)
 
 carab0 <- carab0 %>% select(-Treatment, -PNR_Code) # get rid of unnecessary columns
 
@@ -64,19 +64,19 @@ ggplot(data=carab0, mapping=aes(x=Total_Carabidae_from_sum_of_species_counts)) +
   geom_histogram(breaks=seq(-0.5,23.5,1)) + theme_classic()
 
 # Import information about the trap locations, such as transect and area:
-trap_locations <- read.csv("Aaron_PNR_formatted_csvs/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv",
-                           colClasses = c("factor", "integer", "factor", "factor", "factor", "numeric", "numeric"))
+trap_locations <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_PNR_PitfallTrapLocations_2015.csv")
 library(forcats)
 trap_locations <- mutate(trap_locations, Treatment = fct_recode(Treatment, 
                             "Forest" = "F", "Windthrow" = "W", "Salvaged" = "S"))
+trap_locations$Plot <- as.factor(trap_locations$Plot)
 
 # Merge the carab dataframe with the trap_locations dataframe:
-carab1 <- right_join(trap_locations, carab0, by="Plot") %>% arrange(Collection_interval)
+carab1 <- right_join(trap_locations, carab0, by="Plot") %>% arrange(Interval)
 table(carab1$Plot)
-table(carab1$Collection_interval)
+table(carab1$Interval)
 
 # Look at which treatments have missing data:
-carab1[is.na(carab1$Agonum_fidele), c("Collection_interval", "Plot", "Treatment")] 
+carab1[is.na(carab1$Agonum_fidele), c("Interval", "Plot", "Treatment")] 
 # The missing rows are all from the undisturbed forest treatment
 
 # Deal with missing data and dumped traps ######################################
@@ -129,8 +129,9 @@ levels(carab2$Collection_Date)
 # Sept 20th - June 1st = 30+31+31+20 = 112
 # Sept 20th - June 2nd = 111
 # Write down how long each trap was out:
-days_active <- data.frame(Plot=c( 41,  42,  43,  44,     45,  46,  47,     48,  49,    50,  51,     52,  53,     54,  55,  56,  57,  58,  59,  60,  61,        62,  63,  64), 
-                   days_active=c(112, 111, 111, 112, 111-15, 111, 111, 111-13, 111,111-15, 111, 111-13, 112, 112-14, 112, 112, 112, 112, 112, 112, 112, 111-13-14, 112, 112))
+# THIS SEEMS TO BE INCORRECT!
+days_active <- data.frame(Plot=c( 41,  42,  43,  44,  45,  46,  47,     48,  49,  50,  51,     52,  53,     54,  55,  56,  57,  58,  59,  60,  61,        62,  63,  64), 
+                   days_active=c(112, 111, 111, 112, 111, 111, 111, 111-13, 111, 111, 111, 111-13, 112, 112-14, 112, 112, 112, 112, 112, 112, 112, 111-13-14, 112, 112))
 days_active$Plot <- as.factor(days_active$Plot)
 
 # Use dplyr::summarize to create a new dataframe with a row for every Plot. The
@@ -233,9 +234,9 @@ ggplot(data=carab2_by_plot, aes(x=Treatment, y=evenness)) +
 # for each, and then we will graph it
 
 table(carab2_no_missing$Treatment)
-TF <- carab2_no_missing[which(carab2_no_missing$Treatment == "Forest"),]
-TS <- carab2_no_missing[which(carab2_no_missing$Treatment == "Salvaged"),]
-TW <- carab2_no_missing[which(carab2_no_missing$Treatment == "Windthrow"),]
+TF <- carab2_no_missing[which(carab2_no_missing$Treatment == "F"),]
+TS <- carab2_no_missing[which(carab2_no_missing$Treatment == "S"),]
+TW <- carab2_no_missing[which(carab2_no_missing$Treatment == "W"),]
 
 # The rarefaction method standardizes the sample sizes so that we are comparing 
 # species richness at equivalent abundances
