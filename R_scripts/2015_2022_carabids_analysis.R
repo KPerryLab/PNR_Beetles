@@ -371,7 +371,7 @@ carab_by_plot_2015_stdz_matrix <- as.matrix(carab_by_plot_2015_stdz[,carab_speci
 picante::mpd(samp = carab_by_plot_2015_stdz[,carab_species],
              dis = dist,
              abundance.weighted = TRUE)
-
+# Look at Swenson page 71-72 to find the issue
 
 # Export data tables ###########################################################
 # I will run the statistical models in another R script, so I need to export 
