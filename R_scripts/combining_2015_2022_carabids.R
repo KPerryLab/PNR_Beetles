@@ -3,6 +3,9 @@
 # Powdermill windthrow, salvaging experiment - carabid beetles study
 # Combining the 2015 and 2022 datasets for carabid beetles
 
+# ******************THIS SCRIPT NO LONGER WORKS BECAUSE THE SPECIES COLUMNS ARE 
+# NOT MATCHING UP. *********************
+
 # Outline:
 # 1. I have a list of species which were either found in 2015 or 2022 in the 
 # plots 41-65

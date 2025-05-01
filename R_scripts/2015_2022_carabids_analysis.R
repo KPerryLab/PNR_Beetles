@@ -9,6 +9,7 @@ library(lubridate)
 library(vegan) # For functions specaccum
 library(hillR) # for Shannon diversity
 library(SpadeR) # for Chao estimator
+library(picante) # used for finding mean pairwise distance in trait space
 
 carab_0 <- read.csv("Aaron_PNR_formatted_data/PNR2015_2022_carabid_counts.csv")
 
@@ -30,13 +31,20 @@ plot_locations <- mutate(plot_locations, Treatment =
                                       "Windthrow" = "W", "Salvaged" = "S"))
 plot_locations$Plot <- as.integer(plot_locations$Plot)
 plot_info_columns <- colnames(plot_locations)
+# Note: there are 25 rows in the plot_locations data table, because plot 65 
+# was used in 2015 but plot 63 was used instead of 65 in 2022. This is because
+# there was a reason why the plot needed to be moved by ~27 m
+
+# IMPORTANT NOTE: Right now, I changed the plot number for the 2015 carabid
+# counts dataset to plot 63. This facilitates comparisons between years.
+# But in reality, the trap was set out at plot 65
 
 # Data standardization #########################################################
 
 # First, calculate totals across all sampling intervals, for each year:
 
-carab_species <- colnames(carab_0)[7:63] # IMPORTANT: make sure the species columns
-# start at column 7
+# Make a list of the species found (using the column names)
+carab_species <- colnames(carab_0)[which(colnames(carab_0) == "Agonoleptus_thoracicus"):dim(carab_0)[2]]
 
 # For 2015:
 carab_by_plot_2015_0 <- carab_0 %>% filter(Year==2015) %>% group_by(Plot) %>%
@@ -46,7 +54,7 @@ carab_by_plot_2015_0 <- carab_0 %>% filter(Year==2015) %>% group_by(Plot) %>%
 # plot, which have carabid data (the trap contents were not lost)
 
 # Now join the 2015 carabid count data to the plot information dataframe:
-carab_by_plot_2015_1 <- full_join(plot_locations, carab_by_plot_2015_0, by="Plot")
+carab_by_plot_2015_1 <- right_join(plot_locations, carab_by_plot_2015_0, by="Plot")
 
 # In 2015, it seems the interval 7/22-8/5 had a lot of traps lost.
 # 2015 had 6 total intervals, and the traps were out from 5/27 to 8/17/2015, 
@@ -83,8 +91,8 @@ carab_by_plot_2022_1 <- tibble(full_join(days_active_2022, carab_by_plot_2022_0,
                                 by="Plot"))
 
 # Join to the plot locations information:
-carab_by_plot_2022 <- tibble(full_join(plot_locations, carab_by_plot_2022_1, 
-                                       by="Plot"))
+carab_by_plot_2022 <- tibble(right_join(plot_locations, carab_by_plot_2022_1, 
+                                       by="Plot")) 
 
 # Now divide the species counts by the number of days active to get the 
 # standardized counts:
@@ -124,6 +132,55 @@ carab_by_plot_2022_stdz$total_count_stdz <- rowSums(carab_by_plot_2022_stdz[,car
 mean(carab_by_plot_2022_stdz$total_count_stdz) # Each trap, on average, caught
 # about 0.33 ground beetles per day in 2022
 
+# Investigate accumulation of ground beetle species over the season ############
+
+carab_by_interval_2015 <- carab_0 %>% filter(Year==2015) %>% group_by(Interval) %>%
+  summarise(num_nonmissing_plots = n() - sum(is.na(Agonoleptus_thoracicus)),
+            Set_date = first(Set_date), Collection_date = first(Collection_date),
+            across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
+
+carab_by_interval_2022 <- carab_0 %>% filter(Year==2022) %>% group_by(Interval) %>%
+  summarise(num_nonmissing_plots = n() - sum(is.na(Agonoleptus_thoracicus)),
+            Set_date = first(Set_date), Collection_date = first(Collection_date),
+            across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
+
+# The specaccum function creates a species accumulation curve. The "collector"
+# method means the species are accumulated in the order of the trapping
+# intervals: in other words, over the summer season.
+plot(specaccum(comm=carab_by_interval_2015[,carab_species], method="collector"),
+     xlab="Interval") + title("2015 accumulation of species over the season") 
+
+plot(specaccum(comm=carab_by_interval_2022[,carab_species], method="collector"),
+     xlab="Interval") + title("2022 accumulation of species over the season") 
+
+# Additional species were caught in 2022 in September:
+
+September_only_species <- 
+  names(which((colSums(carab_by_interval_2022[7:8,carab_species]) > 0) & 
+        (colSums(carab_by_interval_2022[1:6,carab_species]) == 0)))
+
+#View(carab_by_interval_2022[, September_only_species])
+#View(carab_by_interval_2015[, September_only_species])
+# Of the nine species found only after Aug 23 in the 2022 sampling, most (8/9) 
+# were not found at all in 2015. These include "Amerizus_unknown","Myas_coracinus",
+# "Patrobus_longicornis"  ,"Platynus_hypolithos","Pterostichus_atratus", "Scaphinotus_andrewsii"  
+# "Scaphinotus_ridingsii" and "Synuchus_impunctatus"
+
+# Investigate carabid abundance over the season ################################
+
+carab_by_interval_2015$total_count_stdz <- 
+  rowSums(carab_by_interval_2015[,carab_species]) / 
+  carab_by_interval_2015$num_nonmissing_plots
+# Gives the number of carabids caught at an average plot during the ~14 day interval
+
+plot(carab_by_interval_2015$Interval, carab_by_interval_2015$total_count_stdz)
+
+carab_by_interval_2022$total_count_stdz <- 
+  rowSums(carab_by_interval_2022[,carab_species]) / 
+  carab_by_interval_2022$num_nonmissing_plots
+
+plot(carab_by_interval_2022$Interval, carab_by_interval_2022$total_count_stdz)
+
 # Investigate number of species found #########################################
 
 # Make a list of species found in each year:
@@ -132,6 +189,15 @@ species_2022 <- names(which((colSums(carab_by_interval_2022[,carab_species]) > 0
 
 # How many species were found in both years?
 base::intersect(species_2015, species_2022)
+# Overall, 28 species were found in both years
+
+# How many species were found only in 2022?
+base::setdiff(species_2022, species_2015)
+# 18 species were found in 2022 but not in 2015
+
+# How many spp were found only in 2015?
+base::setdiff(species_2015, species_2022)
+# 9 species were found in 2015 but not 2022
 
 # Species accumulation curves #################################################
 # Using the raw, unstandardized counts of carabids
@@ -186,7 +252,7 @@ legend("bottomright", legend = c("Forest", "Salvaged", "Windthrow"),
        pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 0.6, bty = "n", lwd = 5,
        col = c("palegreen3", "goldenrod2", "brown4"))
 
-# Chao estimator ##############################################################
+# Taxonomic alpha-diversity: Chao estimator ###################################
 
 carab_by_treatment_2015 <- carab_by_plot_2015 %>% group_by(Treatment) %>%
   summarize(across(all_of(carab_species), ~sum(.)))
@@ -196,81 +262,48 @@ carab_by_treatment_2022 <- carab_by_plot_2022 %>% group_by(Treatment) %>%
 
 forest_counts_2015 <- t(carab_by_treatment_2015[carab_by_treatment_2015$Treatment=="Forest", 
                                      carab_species])
-windthrow_counts_2015 <- carab_by_treatment_2015[carab_by_treatment_2015$Treatment=="Windthrow", 
-                                        carab_species]
-salvaged_counts_2015 <- carab_by_treatment_2015[carab_by_treatment_2015$Treatment=="Salvaged", 
-                                       carab_species]
+windthrow_counts_2015 <- t(carab_by_treatment_2015[carab_by_treatment_2015$Treatment=="Windthrow", 
+                                        carab_species])
+salvaged_counts_2015 <- t(carab_by_treatment_2015[carab_by_treatment_2015$Treatment=="Salvaged", 
+                                       carab_species])
 
-forest_counts_2022 <- carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Forest", 
-                                              carab_species]
-windthrow_counts_2022 <- carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Windthrow", 
-                                                 carab_species]
-salvaged_counts_2022 <- carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Salvaged", 
-                                                carab_species]
+forest_counts_2022 <- t(carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Forest", 
+                                              carab_species])
+windthrow_counts_2022 <- t(carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Windthrow", 
+                                                 carab_species])
+salvaged_counts_2022 <- t(carab_by_treatment_2022[carab_by_treatment_2022$Treatment=="Salvaged", 
+                                                carab_species])
 
 # Undisturbed forest 2015:
 ChaoSpecies(forest_counts_2015, datatype = "abundance", k = 10, conf=0.95)
+# 20 observed species
+# Chao1 estimates 20.997 species. 95% conf. int: 20.090 -> 31.035
 
 # Windthrow 2015:
 ChaoSpecies(windthrow_counts_2015, datatype = "abundance", k = 10, conf=0.95)
+# not working - potentially because there aren't any doubletons
 
 # Salvaged 2015:
 ChaoSpecies(salvaged_counts_2015, datatype = "abundance", k = 10, conf=0.95)
+# 30 observed species
+# Chao1 estimates 32.566 species, 95% conf. int: 30.450 -> 44.619
 
 # Undisturbed forest 2022:
 ChaoSpecies(forest_counts_2022, datatype = "abundance", k = 10, conf=0.95)
+# 30 observed species
+# Chao1 estimates 50.195 species, 95% conf. int: 33.964 -> 132.887
 
 # Windthrow 2022:
 ChaoSpecies(windthrow_counts_2022, datatype = "abundance", k = 10, conf=0.95)
+# 26 observed species
+# Chao1 estimates 46.077 species, 95% conf. int: 30.645 -> 112.779
 
 # Salvaged 2022:
 ChaoSpecies(salvaged_counts_2022, datatype = "abundance", k = 10, conf=0.95)
+# 33 observed species
+# Chao1 estimates 65.544 species, 95% conf. int: 41.132 -> 163.240
 
-# Investigate accumulation of ground beetle species over the season ############
-
-carab_by_interval_2015 <- carab_0 %>% filter(Year==2015) %>% group_by(Interval) %>%
-  summarise(num_nonmissing_plots = n() - sum(is.na(Agonoleptus_thoracicus)),
-            Set_date = first(Set_date), Collection_date = first(Collection_date),
-            across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
-
-carab_by_interval_2022 <- carab_0 %>% filter(Year==2022) %>% group_by(Interval) %>%
-  summarise(num_nonmissing_plots = n() - sum(is.na(Agonoleptus_thoracicus)),
-            Set_date = first(Set_date), Collection_date = first(Collection_date),
-            across(all_of(carab_species), ~ sum(.x, na.rm=TRUE)))
-
-plot(specaccum(comm=carab_by_interval_2015[,carab_species], method="collector"),
-     xlab="Interval") + title("2015 accumulation of species over the season") 
-
-plot(specaccum(comm=carab_by_interval_2022[,carab_species], method="collector"),
-     xlab="Interval") + title("2022 accumulation of species over the season") 
-
-# Additional species were caught in 2022 in September:
-
-September_only_species <- names(which((colSums(carab_by_interval_2022[7:8,carab_species]) > 0) & 
-  (colSums(carab_by_interval_2022[1:6,carab_species]) == 0)))
-
-carab_by_interval_2015[, September_only_species]
-# Of the nine species found only after Aug 23 in the 2022 sampling, most (8/9) 
-# were not found at all in 2015. These include "Amerizus_unknown","Myas_coracinus",
-# "Patrobus_longicornis"  ,"Platynus_hypolithos","Pterostichus_atratus", "Scaphinotus_andrewsii"  
-# "Scaphinotus_ridingsii" and "Synuchus_impunctatus"
-
-# Investigate carabid abundance over the season ################################
-
-carab_by_interval_2015$total_count_stdz <- 
-  rowSums(carab_by_interval_2015[,carab_species]) / 
-  carab_by_interval_2015$num_nonmissing_plots
-# Gives the number of carabids caught at an average plot during the ~14 day interval
-
-plot(carab_by_interval_2015$Interval, carab_by_interval_2015$total_count_stdz)
-
-carab_by_interval_2022$total_count_stdz <- 
-  rowSums(carab_by_interval_2022[,carab_species]) / 
-  carab_by_interval_2022$num_nonmissing_plots
-
-plot(carab_by_interval_2022$Interval, carab_by_interval_2022$total_count_stdz)
-
-# Taxonomic alpha-diversity ####################################################
+# Taxonomic alpha-diversity: plot level species richness and Shannon diversity ####
 
 carab_by_plot_2015_stdz$species_richness <- 
   rowSums(carab_by_plot_2015_stdz[,carab_species] > 0)
@@ -302,6 +335,8 @@ carab_by_plot_2015_stdz$shannon_diversity <-
 carab_by_plot_2022_stdz$shannon_diversity <- 
   hill_taxa(carab_by_plot_2022_stdz[,carab_species], q = 1, MARGIN = 1)
 
+carab_by_plot_2015
+
 # Plot Shannon diversity as a function of treatment:
 ggplot(data=carab_by_plot_2015_stdz, aes(x=Treatment, y=shannon_diversity)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) +  ylim(0,15)+
@@ -309,11 +344,46 @@ ggplot(data=carab_by_plot_2015_stdz, aes(x=Treatment, y=shannon_diversity)) +
   ggtitle("2015 Ground Beetle Shannon diversity")
 
 ggplot(data=carab_by_plot_2022_stdz, aes(x=Treatment, y=shannon_diversity)) +
-  geom_jitter(width=0.05, height=0, alpha=0.5) +  ylim(0,15)+
-  ylab("Shannon diversity") + xlab("Forest disturbance") + 
+  geom_jitter(width=0.05, height=0, alpha=0.5) + ylim(0,15) +
+  ylab("Shannon diversity") + xlab("Forest disturbance") +
   ggtitle("2022 Ground Beetle Shannon diversity")
 
 
+# Functional alpha diversity ###################################################
+# I will calculate functional alpha diversity using the weighted mean pairwise 
+# distance between species found at a plot. The distance is the distance in 
+# trait space (larger distance = traits are more distict). Distances will
+# be weighted by the product of the relative abundances of the two species.
 
+# Important note: as the species richness increases, the mean pairwise distance
+# tends to become less variable (source: Swenson)
+
+dist_0 <- read.csv("Aaron_PNR_formatted_data/carabid_dist_in_trait_space.csv")
+
+# Check if the species column names match between the distance matrix and the
+# species abundance data:
+all.equal(colnames(dist_0), carab_species) # True
+
+dist <- as.matrix(dist_0)
+
+carab_by_plot_2015_stdz_matrix <- as.matrix(carab_by_plot_2015_stdz[,carab_species])
+
+picante::mpd(samp = carab_by_plot_2015_stdz[,carab_species],
+             dis = dist,
+             abundance.weighted = TRUE)
+
+
+# Export data tables ###########################################################
+# I will run the statistical models in another R script, so I need to export 
+# the plot-level data tables
+
+#write.csv(carab_by_plot_2015_stdz, file="PNR2015_carabid_counts_by_plot_standardized.csv",
+#          row.names = F)
+# Observation: the capture rate of ground beetles in 2015 varied widely between
+# plots. One plot caught a ton of Chlaenius emarginatus and Pterostichus
+# moestus
+
+#write.csv(carab_by_plot_2022_stdz, file="PNR2022_carabid_counts_by_plot_standardized.csv",
+#          row.names = F)
 
 

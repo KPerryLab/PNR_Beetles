@@ -4,6 +4,7 @@
 # Powdermill Nature Reserve in the tornado/salvage areas
 
 library(ggplot2)
+theme_set(theme_classic)
 library(dplyr)
 library(lubridate)
 
@@ -241,13 +242,17 @@ ggplot(data=soil_moisture_temp_2015, aes(x=Day,
 # The soil temp was higher in August in 2015
 
 # Summarize by plot:
-soil_moisture_temp_2015_by_plot <- soil_moisture_temp_2015 %>% group_by(Plot) %>% 
+soil_moisture_temp_2015_by_plot_0 <- soil_moisture_temp_2015 %>% group_by(Plot) %>% 
   summarise(Treatment = first(Treatment),
             mean_moisture = mean(SoilMoistAvrg),
             var_moisture = var(SoilMoistAvrg),
             mean_temp = mean(SoilTempAvrg),
             var_temp = var(SoilTempAvrg),
-            n_dates_measured = n())
+            n_dates_measured = n()) %>% select(-Treatment)
+
+#
+soil_moisture_temp_2015_by_plot <- 
+  inner_join(trap_locations, soil_moisture_temp_2015_by_plot_0, by="Plot")
 
 # Graph soil moisture in 2015 by plot:
 ggplot(data=soil_moisture_temp_2015_by_plot, aes(x=Treatment, y=mean_moisture)) +
@@ -378,32 +383,52 @@ ggplot(data=cover_2015_by_plot, aes(x=Treatment, y=canopy_openness)) +
 # windthrow plots seem to have canopy openness values slightly higher than 
 # those of the undisturbed forest.
 
-# Investigating soil moisture, temperature, vegetation cover, veg height,
-# and canopy openness in 2015:
+# Investigating soil moisture, temperature, vegetation cover, rock cover,
+# litter cover, CWD cover, FWD cover, veg height, and canopy openness in 2015:
 
 # Kayla's pHD found that salvaged plots in 2015 either had high soil moisture
 # and temp levels, or lower soil moisture and dense ground-level vegetation
 
 # Join the moisture and temp data to the other data
-
-env_2015_by_plot <- full_join(soil_moisture_temp_2015_by_plot, cover_2015_by_plot, 
+cover_2015_by_plot_1 <- cover_2015_by_plot %>% select(-Treatment)
+env_2015_by_plot_0 <- full_join(soil_moisture_temp_2015_by_plot, cover_2015_by_plot_1, 
                               by="Plot")
-env_2015_by_plot$Treatment.x == env_2015_by_plot$Treatment.y
 
-vars_list <- c("mean_moisture", "mean_temp", "canopy_openness", "VegAvg", "VegHtAvg")
+vars_list <- c("mean_moisture", "mean_temp", "canopy_openness", "VegAvg", 
+               "LitterAvg", "FWDAvg", "CWDAvg", "RockAvg","VegHtAvg", 
+               "Elev_ft")
+
+cor_matrix_2015 <- cor(env_2015_by_plot_0[, vars_list])
+library(corrplot)
+corrplot::corrplot(cor_matrix_2015, method="number")
 
 # Run a PCA:
-pc <- prcomp(env_2015_by_plot[, c(vars_list)], center=T, scale. = T)
-attributes(pc)
+pc_2015 <- prcomp(env_2015_by_plot[, c(vars_list)], center=T, scale. = T)
 
 library(factoextra)
-factoextra::get_eig(pc)
-factoextra::fviz_pca_biplot(pc, axes=c(1,2))
-factoextra::fviz_pca_biplot(pc, axes=c(2,3))
+factoextra::get_eig(pc_2015)
+factoextra::fviz_pca_biplot(pc_2015, axes=c(1,2))
+factoextra::fviz_pca_biplot(pc_2015, axes=c(2,3))
+factoextra::fviz_pca_biplot(pc_2015, axes=c(3,4))
+pc_2015$rotation
+# PC1 is associated with high leaf litter and lower canopy openness, and lower
+# vegetation cover, as well as a few other variables
 
-View(pc$x)
-pc$rotation
+# PC2 is associated with high soil moisture and low elevation
 
-# This needs further study.
+# PC3 is associated with low rock cover and high amounts of fine woody debris
+# and higher vegetation height
+
+# PC4 is associated with higher amounts of coarse woody debris
+
+# Together, the first four PC axes explain 77% of the variance
+
+# Bind the PC axes to the data table of environmental variables:
+
+env_2015_by_plot <- bind_cols(env_2015_by_plot, data.frame(pc_2015$x))
+
+ggplot(data=env_2015_by_plot_1) + geom_point(aes(x=PC1, y=PC2, color=Treatment.x))
+
+
 
 

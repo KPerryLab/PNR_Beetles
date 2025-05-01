@@ -1,6 +1,8 @@
 # Aaron Tayal
 # 3/18/2025
 # Which carabid species were caught in 2015, within plots 41-65 at Powdermill?
+# This script also creates a subsetted data table for 2015 with only species columns
+# with non-zero total count
 
 library(readxl)
 library(dplyr)
