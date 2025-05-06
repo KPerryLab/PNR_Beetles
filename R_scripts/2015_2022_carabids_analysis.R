@@ -10,6 +10,8 @@ library(vegan) # For functions specaccum
 library(hillR) # for Shannon diversity
 library(SpadeR) # for Chao estimator
 library(picante) # used for finding mean pairwise distance in trait space
+library(geometry) # for dot product
+library(FD) # for community-weighted mean
 
 carab_0 <- read.csv("Aaron_PNR_formatted_data/PNR2015_2022_carabid_counts.csv")
 
@@ -131,6 +133,7 @@ mean(carab_by_plot_2015_stdz$total_count_stdz) # Each trap, on average, caught
 carab_by_plot_2022_stdz$total_count_stdz <- rowSums(carab_by_plot_2022_stdz[,carab_species])
 mean(carab_by_plot_2022_stdz$total_count_stdz) # Each trap, on average, caught
 # about 0.33 ground beetles per day in 2022
+
 
 # Investigate accumulation of ground beetle species over the season ############
 
@@ -365,25 +368,130 @@ dist_0 <- read.csv("Aaron_PNR_formatted_data/carabid_dist_in_trait_space.csv")
 all.equal(colnames(dist_0), carab_species) # True
 
 dist <- as.matrix(dist_0)
+rownames(dist) <- colnames(dist)
 
 carab_by_plot_2015_stdz_matrix <- as.matrix(carab_by_plot_2015_stdz[,carab_species])
+carab_by_plot_2022_stdz_matrix <- as.matrix(carab_by_plot_2022_stdz[,carab_species])
 
-picante::mpd(samp = carab_by_plot_2015_stdz[,carab_species],
-             dis = dist,
-             abundance.weighted = TRUE)
-# Look at Swenson page 71-72 to find the issue
+# Compute the weighted mean_pairwise_distance for each plot
+carab_by_plot_2015_stdz$mean_pairwise_distance <-
+  picante::mpd(samp = carab_by_plot_2015_stdz_matrix,
+               dis = dist,
+               abundance.weighted = TRUE)
+
+carab_by_plot_2022_stdz$mean_pairwise_distance <-
+  picante::mpd(samp = carab_by_plot_2022_stdz_matrix,
+               dis = dist,
+               abundance.weighted = TRUE)
+
+# How does mean pariwise distance relate to spp richness?
+ggplot(data=carab_by_plot_2015_stdz) + geom_point(aes(x=species_richness,
+                                                      y=mean_pairwise_distance))
+ggplot(data=carab_by_plot_2022_stdz) + geom_point(aes(x=species_richness,
+                                                      y=mean_pairwise_distance))
+# The mean_pairwise_distance seems to be positively correlated with spp richness
+# for 2015, but not as much in 2022
+
+# How does mean pairwise distance relate to activity-abundance?
+ggplot(data=carab_by_plot_2015_stdz) + geom_point(aes(x=total_count_stdz,
+                                                      y=mean_pairwise_distance))
+ggplot(data=carab_by_plot_2022_stdz) + geom_point(aes(x=total_count_stdz,
+                                                      y=mean_pairwise_distance))
+
+# Plot functional alpha-diversity as a function of treatment:
+ggplot(data=carab_by_plot_2015_stdz, aes(x=Treatment, y=mean_pairwise_distance)) +
+  geom_jitter(width=0.05, height=0, alpha=0.5) +  ylim(0,0.3)+
+  ylab("Mean pairwise distance") + xlab("Forest disturbance") + 
+  ggtitle("2015 Ground Beetle Shannon diversity")
+
+ggplot(data=carab_by_plot_2022_stdz, aes(x=Treatment, y=mean_pairwise_distance)) +
+  geom_jitter(width=0.05, height=0, alpha=0.5) + ylim(0,0.3) +
+  ylab("Mean pairwise distance") + xlab("Forest disturbance") +
+  ggtitle("2022 Ground Beetle Shannon diversity")
+
+# Investigate activity-abundance of open-habitat, eurytopic, and ###############
+# forest-specialist carabids 
+
+# Import the trait data:
+traits <- read.csv("Aaron_PNR_formatted_data/PNR_carabid_traits_by_spp.csv")
+rownames(traits) <- traits$Species
+
+open_habitat_spp <- traits[!is.na(traits$Forest_affinity) &
+  traits$Forest_affinity == "open habitat", "Species"] # 2 spp
+eurytopic_spp <- traits[!is.na(traits$Forest_affinity) &
+  traits$Forest_affinity == "eurytopic", "Species"] # 28 spp
+forest_specialist_spp <- traits[!is.na(traits$Forest_affinity) &
+  traits$Forest_affinity == "forest specialist", "Species"] # 23 spp
+unknown_forest_affinity_spp <- traits[is.na(traits$Forest_affinity), "Species"] 
+# (2 species have unknown forest affinity)
+
+# Create a column for activity-abundance of open habitat species
+carab_by_plot_2015_stdz$open_habitat_spp_stdz <- 
+  rowSums(carab_by_plot_2015_stdz[, open_habitat_spp])
+
+# And for eurytopic species:
+carab_by_plot_2015_stdz$eurytopic_spp_stdz <- 
+  rowSums(carab_by_plot_2015_stdz[, eurytopic_spp])
+
+# And for forest specialists:
+carab_by_plot_2015_stdz$forest_specialist_spp_stdz <- 
+  rowSums(carab_by_plot_2015_stdz[, forest_specialist_spp])
+
+# Do the same for the 2022 data:
+carab_by_plot_2022_stdz$open_habitat_spp_stdz <- 
+  rowSums(carab_by_plot_2022_stdz[, open_habitat_spp])
+
+carab_by_plot_2022_stdz$eurytopic_spp_stdz <- 
+  rowSums(carab_by_plot_2022_stdz[, eurytopic_spp])
+
+carab_by_plot_2022_stdz$forest_specialist_spp_stdz <- 
+  rowSums(carab_by_plot_2022_stdz[, forest_specialist_spp])
+
+# Community-weighted mean trait values #########################################
+
+# I want to calculate community-weighted mean trait values for each
+# plot
+CWM <- function(community, trait_name){
+  geometry::dot(c(t(community[carab_species] /
+                      sum(community[carab_species]))),
+                traits[,trait_name])
+}
+
+geometry::dot(c(t(carab_by_plot_2015_stdz[1, carab_species] / 
+                    carab_by_plot_2015_stdz$total_count_stdz[1])), 
+              traits$PC1) # weighted mean is simply a dot product of a vector 
+# of the relative abundances of each species, with a vector of the trait value 
+# for each species
+
+# Test out the function to make sure it works:
+CWM(community = carab_by_plot_2015_stdz[1,], 
+    trait_name = "PC1")
+
+# I decided to use the function "functcomp" in the package FD to calculate 
+# CWMs. It looks like the results match what I got with my function. Here,
+# I'll calculate the CWM for each of the first three PC axes, as well
+# as Water_affinity and Flight_capability
+CWMs_2015 <- FD::functcomp(traits[,c("PC1", "PC2", "PC3", "Water_affinity", "Flight_capability")], 
+          as.matrix(carab_by_plot_2015_stdz[, carab_species]), CWM.type = "all")
+
+# Join to the data table:
+carab_by_plot_2015_stdz_with_CWMs <- cbind(carab_by_plot_2015_stdz, CWMs_2015)
+
+# And for 2022:
+CWMs_2022 <- functcomp(traits[,c("PC1", "PC2", "PC3", "Water_affinity", "Flight_capability")], 
+                       as.matrix(carab_by_plot_2022_stdz[, carab_species]), CWM.type = "all")
+
+carab_by_plot_2022_stdz_with_CWMs <- cbind(carab_by_plot_2022_stdz, CWMs_2015)
 
 # Export data tables ###########################################################
 # I will run the statistical models in another R script, so I need to export 
 # the plot-level data tables
 
-#write.csv(carab_by_plot_2015_stdz, file="PNR2015_carabid_counts_by_plot_standardized.csv",
-#          row.names = F)
+#write.csv(carab_by_plot_2015_stdz_with_CWMs, file="PNR2015_carabid_counts_by_plot_standardized.csv", row.names = F)
 # Observation: the capture rate of ground beetles in 2015 varied widely between
 # plots. One plot caught a ton of Chlaenius emarginatus and Pterostichus
 # moestus
 
-#write.csv(carab_by_plot_2022_stdz, file="PNR2022_carabid_counts_by_plot_standardized.csv",
-#          row.names = F)
+#write.csv(carab_by_plot_2022_stdz_with_CWMs, file="PNR2022_carabid_counts_by_plot_standardized.csv", row.names = F)
 
 

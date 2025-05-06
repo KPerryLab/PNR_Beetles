@@ -1,6 +1,5 @@
 # Aaron Tayal
-# UPDATED VERSION, May 5, 2025
-
+# 4/10/2025
 # Purpose is to:
 # 1. Investigate correlation between the trait values
 # 2. Divide traits by body length to standardize them
@@ -15,7 +14,6 @@ theme_set(theme_classic())
 library(corrplot) # creates correlation visualizations
 library(factoextra) # plot PCA results
 library(FD) # for gower distance
-library(geometry) # for dot product
 
 traits <- read_excel("PNR_Raw_Data/PNR_SpeciesTraits_2022.xlsx", sheet=2, na='NA')
 
@@ -109,7 +107,7 @@ numeric_traits_modified <- c("body_length", "eye_length_standard",
                                    "antenna_rear_leg_ratio",
                                    "rear_trochanter_length_standard")
 
-cor_matrix_modified <- cor(na.omit(traits[, numeric_traits_modified]), method="pearson")
+cor_matrix_modified <- cor(na.omit(traits[, trait_list_modified]), method="pearson")
 corrplot::corrplot(cor_matrix_modified, method="number")
 # This modified set of traits appears better because the traits have lower
 # Pearson correlation coefficients than before
@@ -130,10 +128,14 @@ traits[which(traits$body_length < 6),"Species"]
 # be expected given its body size
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Eye_length), alpha=0.5) +
-  xlim(0,35) + ylim(0,2) 
+  xlim(0,35) + ylim(0,2) # A few candidates for data entry mistakes - see
+# eye protrusion ratio, below
 
 # Does eye protrusion ratio need to be standardized to body length?
 ggplot(data=traits) + geom_point(aes(x=body_length, y=eye_protrusion_ratio), alpha=0.5)
+
+traits[which(traits$eye_protrusion_ratio > 1.7),"Species"] # data entry mistake candidates
+traits[which(traits$eye_protrusion_ratio < 0.7),"Species"] # data entry mistake candidates
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Pronotum_width), alpha=0.5)
 traits[which(traits$body_length > 20 & traits$Pronotum_width < 5),"Species"] # scaphinotus andrewsii
@@ -161,6 +163,24 @@ ggplot(data=traits) + geom_point(aes(x=Eye_length, y=eye_protrusion_ratio), alph
 ggplot(data=traits) + geom_point(aes(x=rear_leg_length, y=antenna_rear_leg_ratio), alpha=0.5)
 # Observation: the antennae measurements are likely more variable due to the 
 # difficulties in measuring antenna length
+traits[which(traits$antenna_rear_leg_ratio > 0.9), c("Species", "Sex", "Number_out_of_3")] # Scaphinotus_imperfectus
+
+# Average the values of the (up to) six individuals ###########
+
+traits$Species <- as.factor(traits$Species)
+traits_by_spp <- traits %>% group_by(Species) %>%
+  summarize(across(all_of(numeric_traits_standard), ~ mean(., na.rm=T)),
+            Water_affinity = first(Water_affinity),
+            Flight_capability = first(Flight_capability))
+# Note: the ~ indicates a "lambda function" which allows me to tell the mean
+# function to remove NA values when calculating the mean
+
+# The only NA's in the dataset are for the water affinity or flight capability
+# for Amerizus_unknown and Agonoleptus_thoracicus
+
+# Look at the correlation matrix of the traits_by_spp table:
+cor_matrix_by_spp <- cor(na.omit(traits_by_spp[, trait_list_standard]))
+corrplot::corrplot(cor_matrix_by_spp, method="number")
 
 # MODIFIED VERSION Average the values of the (up to) six individuals ###########
 
@@ -178,15 +198,78 @@ traits_by_spp_modified <- traits %>% group_by(Species) %>%
 # for Amerizus_unknown and Agonoleptus_thoracicus
 
 # Look at the correlation matrix of the traits_by_spp table:
-cor_matrix_by_spp_modified <- cor(na.omit(traits_by_spp_modified[, numeric_traits_modified]), method="pearson")
+cor_matrix_by_spp_modified <- cor(na.omit(traits_by_spp_modified[, trait_list_modified]), method="pearson")
 corrplot::corrplot(cor_matrix_by_spp_modified, method="number")
 # All correlation coefficients are below 0.6, except for rear leg length against 
-# pronotum width
+# pronotum width:
+ggplot(data=traits_by_spp) + geom_point(aes(x=rear_leg_length_standard,
+                                                y=pronotum_width_standard))
+# Proportionally longer legged species (relative to body length) tend to
+# have narrower pronota
 
+# Run a principal component analysis: ##########################################
 
-# Create a data table with Notiophilus ommitted (see below):
-traits_by_spp_modified_without_N <- traits_by_spp_modified %>%
+#rownames(traits_per_indiv) <- traits_per_indiv$Species # change row names to the 
+# species names
+
+# Here, I'll only run the PCA with the numeric traits (ie. excluding flight
+# capability and water affinity)
+
+pc <- prcomp(traits_by_spp[, c(numeric_traits_standard)], center = T, scale. = T)
+# prcomp does a singular value decomposition of the (centered and
+# scaled) data matrix
+attributes(pc)
+
+# visualize eigenvalues via a scree plot:
+factoextra::get_eig(pc)
+factoextra::fviz_pca_biplot(pc, axes=c(1,2))
+factoextra::fviz_pca_biplot(pc, axes=c(2,3))
+
+# Remove Notiophilus and run another principal component analysis: #############
+
+# The species Notiophilus aenius had just 1 capture in the entire dataset.
+# It has extremely big eyes, which I think might be having undue influence
+# on the PC axes. Thus, I'll remove Notiophilus and see if the PC axes change.
+
+traits_by_spp_without_Notiophilus <- traits_by_spp %>%
   filter(Species != "Notiophilus_aeneus")
+
+pc_without_Notiophilus <- 
+  prcomp(traits_by_spp_without_Notiophilus[, numeric_traits_standard], center = T, scale. = T)
+
+factoextra::get_eig(pc_without_Notiophilus)
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2))
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(2,3))
+pc_without_Notiophilus$rotation
+# PC1 is associated with proportionally long rear legs and proportionally long 
+# antenna, and proportionally short rear trochanter length and narrow pronotum. 
+# Exemplars of high PC1 include Galerita bicolor and Platynus angustatus. 
+# Examplars of low PC1 include Harpalus spadiceous and Pterostichus sayanus.
+# PC1 explains 38% of the variance in the data.
+
+# PC2 is associated with small size and proportionally bigger eyes. # Examplars
+# of high PC2 include Olisthopus parmatus and Cymindis limbata. Examplars of 
+# low PC2 include Scaphinotus andrewsii and Pterostichus rostratus # PC2 
+# explains 27% of the variance in the data.
+
+# PC3 is associated with proportionally smaller abdomen width. Examplars of high 
+# PC3 include Chlaenius emarginatus (likely due to the long mandibles). 
+# Examplars of low PC3 include Scaphinotus viduus (wide abdomen)
+
+# Now, how many PC axes is it necessary to keep for the analysis?
+# PC1, 2, and 3 together explain 77.7% of the variance in the data
+
+# If I include PC 4 and 5 as well, then they explain 93.5% of the variance
+
+# Append the PC axes onto the traits_per_indiv_with_Notiophilus table:
+traits_by_spp_without_Notiophilus_1 <- 
+  bind_cols(traits_by_spp_without_Notiophilus, data.frame(pc_without_Notiophilus$x))
+
+# What is the correlation between PC1, PC2, PC3, Water_affinity, and Flight_capability?
+cor_matrix2 <- cor(na.omit(traits_by_spp_without_Notiophilus_1[, c(10:16)]), method="pearson")
+corrplot::corrplot(cor_matrix2, method="number")
+# PC2 is somewhat correlated with Flight capability, because smaller species
+# with proportionally bigger eyes are likely to be flight capable.
 
 # MODIFIED TRAIT LIST Run a principal components analysis #####################
 
@@ -208,10 +291,10 @@ pc_modified$rotation
 traits_by_spp_modified <- 
   bind_cols(traits_by_spp_modified, data.frame(pc_modified$x))
 
-# What is the correlation between PC1, PC2, PC3, PC4, Water_affinity, 
+# What is the correlation between PC1, PC2, PC3, PC4, PC5, Water_affinity, 
 # and Flight_capability?
 variables_for_distance_matrix <- c("PC1", "PC2", 
-                                   "PC3", "PC4", "Water_affinity", 
+                                   "PC3", "PC4", "PC5", "Water_affinity", 
                                    "Flight_capability")
 cor_matrix_pc_modified <- cor(na.omit(traits_by_spp_modified[, variables_for_distance_matrix]))
 corrplot::corrplot(cor_matrix_pc_modified, method="number")
@@ -235,133 +318,28 @@ table(traits_by_spp_modified$Water_affinity)
 var(traits_by_spp_modified$Flight_capability, na.rm = T)
 table(traits_by_spp_modified$Flight_capability)
 
-# Graph scatter plots of the main findings of the PCA:
-
-# PC1:
-ggplot(data=traits_by_spp_modified) + geom_point(aes(x=rear_leg_length_standard,
-                                                     y=pronotum_width_standard))
-
-# PC2:
-ggplot(data=traits_by_spp_modified) + geom_point(aes(x=body_length,
-                                                     y=eye_length_standard))
-
-# PC3:
-ggplot(data=traits_by_spp_modified) + geom_point(aes(x=antenna_rear_leg_ratio,
-                                                     y=eye_protrusion_ratio))
-
-# PC4
-ggplot(data=traits_by_spp_modified) + geom_point(aes(x=abdomen_width_standard,
-                                                     y=eye_length_standard))
-
-# I'm worried that Notiophilus might be driving many of the observed patterns
-
-# Rerun the modified PCA, but without Notiophilus #############################
-
-# Remove Notiophilus and run another principal component analysis: #############
-
-# The species Notiophilus aenius had just 1 capture in the entire dataset.
-# It has extremely big eyes, which I think might be having undue influence
-# on the PC axes. Thus, I'll remove Notiophilus and see if the PC axes change.
-
-pc_without_Notiophilus <- 
-  prcomp(traits_by_spp_modified_without_N[, numeric_traits_modified], 
-         center = T, scale. = T)
-
-factoextra::get_eig(pc_without_Notiophilus)
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(2,3))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(3,4))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(4,5))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(5,6))
-pc_without_Notiophilus$rotation
-
-# Append the PC axes onto the traits_per_indiv_with_Notiophilus table:
-traits_by_spp_modified_without_N_1 <- 
-  bind_cols(traits_by_spp_modified_without_N, data.frame(pc_without_Notiophilus$x))
-
-# What is the correlation between PC1, PC2, PC3, Water_affinity, and Flight_capability?
-cor_matrix2 <- cor(na.omit(traits_by_spp_modified_without_N_1[, c(12:16)]), method="pearson")
-corrplot::corrplot(cor_matrix2, method="number")
-# PC2 is somewhat correlated with Flight capability, because smaller species
-# with proportionally bigger eyes are likely to be flight capable.
-
-# Now I'd like to project Notiophilus onto the PC axes I found, so I can still
-# include the species:
-Notiophilus_traits_0 <- 
-  traits_by_spp_modified[traits_by_spp_modified$Species == "Notiophilus_aeneus", ]
-
-# center and scale:
-Notiophilus_traits <- Notiophilus_traits_0
-Notiophilus_traits[numeric_traits_modified] <- 
-  (Notiophilus_traits_0[numeric_traits_modified] - pc_without_Notiophilus$center) /
-  pc_without_Notiophilus$scale
-
-Notiophilus_traits$PC1 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC1,
-              c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC2 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC2,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC3 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC3,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC4 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC4,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC5 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC5,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC6 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC6,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC7 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC7,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-Notiophilus_traits$PC8 <- 
-  geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC8,
-                c(t(Notiophilus_traits[numeric_traits_modified])))
-
-# Join the Notiophilus data back onto the trait data table
-
-colnames(Notiophilus_traits) == colnames(traits_by_spp_modified_without_N_1)
-combined_0 <- rbind(Notiophilus_traits, traits_by_spp_modified_without_N_1)
-
-# rearrange the rows:
-combined <- combined_0 %>% arrange(Species)
-
-# Graph it for a reality check:
-ggplot(data=combined, aes(x=PC1, y=PC2, label=Species)) + geom_point() + 
-  geom_text(alpha=0.5) + coord_fixed()
-ggplot(data=combined, aes(x=PC2, y=PC3, label=Species)) + geom_point() + 
-  geom_text(alpha=0.5)+ coord_fixed()
-ggplot(data=combined, aes(x=PC3, y=PC4, label=Species)) + geom_point() + 
-  geom_text(alpha=0.5)+ coord_fixed()
-# Looks good
 
 # Export a data table of traits ###############################################
 
-write.csv(combined, 
-          "PNR_carabid_traits_by_spp.csv", row.names = F)
+#write.csv(traits_by_spp_modified, "PNR_carabid_traits_by_spp.csv", row.names = F)
 
 # Distance matrix incorporating water affinity and flight capability: #########
 
 # Use Gower distance (see Swenson), incorporating PC1 through PC5, and 
 # water affinity and Flight capability
-combined$Water_affinity <- factor(combined$Water_affinity, order = T, 
-                                     levels = c(0,0.5,1))
-combined$Flight_capability <- factor(combined$Flight_capability, order = T,
-                                      levels = c(0,0.5,1))
-gower_dist <- FD::gowdis(combined[, c(variables_for_distance_matrix)], ord="metric")
+traits_by_spp_modified$Water_affinity <- as.factor(traits_by_spp_modified$Water_affinity)
+traits_by_spp_modified$Flight_capability <- as.factor(traits_by_spp_modified$Flight_capability)
+gower_dist <- FD::gowdis(traits_by_spp_modified[, c(variables_for_distance_matrix)])
 
 # try to visualize the distance matrix using a heatmap:
 heatmap(as.matrix(gower_dist))
 # I'm confused whether this is a symmetric matrix. It appears to be.
 
 # What is the mean distance?
-mean(gower_dist) # 0.29
+mean(gower_dist) # 0.32
 
 # the max?
-max(gower_dist) # 0.69
+max(gower_dist) # 0.71
 
 # Export the distance matrix: #################################################
 # Label the column names for each species:
