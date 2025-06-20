@@ -129,6 +129,7 @@ sum(carab_by_plot_2022$total_count) # 857 ground beetles in 2022
 carab_by_plot_2015_stdz$total_count_stdz <- rowSums(carab_by_plot_2015_stdz[,carab_species])
 mean(carab_by_plot_2015_stdz$total_count_stdz) # Each trap, on average, caught
 # about 0.5 ground beetles per day in 2015
+var(carab_by_plot_2015_stdz$total_count_stdz)
 
 carab_by_plot_2022_stdz$total_count_stdz <- rowSums(carab_by_plot_2022_stdz[,carab_species])
 mean(carab_by_plot_2022_stdz$total_count_stdz) # Each trap, on average, caught
@@ -384,7 +385,7 @@ carab_by_plot_2022_stdz$mean_pairwise_distance <-
                dis = dist,
                abundance.weighted = TRUE)
 
-# How does mean pariwise distance relate to spp richness?
+# How does mean pairwise distance relate to spp richness?
 ggplot(data=carab_by_plot_2015_stdz) + geom_point(aes(x=species_richness,
                                                       y=mean_pairwise_distance))
 ggplot(data=carab_by_plot_2022_stdz) + geom_point(aes(x=species_richness,
@@ -402,12 +403,104 @@ ggplot(data=carab_by_plot_2022_stdz) + geom_point(aes(x=total_count_stdz,
 ggplot(data=carab_by_plot_2015_stdz, aes(x=Treatment, y=mean_pairwise_distance)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) +  ylim(0,0.3)+
   ylab("Mean pairwise distance") + xlab("Forest disturbance") + 
-  ggtitle("2015 Ground Beetle Shannon diversity")
+  ggtitle("2015 Ground Beetle functional alpha-diversity")
 
 ggplot(data=carab_by_plot_2022_stdz, aes(x=Treatment, y=mean_pairwise_distance)) +
   geom_jitter(width=0.05, height=0, alpha=0.5) + ylim(0,0.3) +
   ylab("Mean pairwise distance") + xlab("Forest disturbance") +
-  ggtitle("2022 Ground Beetle Shannon diversity")
+  ggtitle("2022 Ground Beetle functional alpha-diversity")
+
+# Taxonomic beta-diversity ###################################################
+
+# First, I need to convert my data tables to relative abundance data:
+carab_by_plot_2015_stdz_rel <- vegan::decostand(carab_by_plot_2015_stdz[carab_species], 
+                                                method = "total")
+
+carab_by_plot_2022_stdz_rel <- vegan::decostand(carab_by_plot_2022_stdz[carab_species], 
+                                                method = "total")
+
+# Now compute distance matrix between all 24 plots:
+dist_spp_space_2015 <- vegdist(carab_by_plot_2015_stdz_rel, method = "bray")
+summary(as.vector(dist_spp_space_2015))
+# I'm noticing a lot of 1s in this matrix (19 1s), which indicates complete dissimilarity.
+# I guess if there is no commonality in the captured species, then the dissimilarity
+# is 1.
+
+dist_spp_space_2022 <- vegdist(carab_by_plot_2022_stdz_rel, method = "bray")
+summary(as.vector(dist_spp_space_2022))
+
+# Now run the Permutational Multivariate Analysis of Variance:
+adonis2(dist_spp_space_2015 ~ carab_by_plot_2015_stdz$Treatment, permutations = 999)
+
+adonis2(dist_spp_space_2022 ~ carab_by_plot_2015_stdz$Treatment, permutations = 999)
+
+# Run the Analysis of Multivariate Homogeneity of Group Dispersions:
+
+beta_dispersion_2015 <- betadisper(d = dist_spp_space_2015, 
+                              group = carab_by_plot_2015_stdz$Treatment, 
+                              type = c("median"))
+beta_dispersion_2015
+plot(beta_dispersion_2015)
+boxplot(beta_dispersion_2015, ylab = "Distance to median", xlab="")
+anova(beta_dispersion_2015)
+
+beta_dispersion_2022 <- betadisper(d = dist_spp_space_2022, 
+                                   group = carab_by_plot_2022_stdz$Treatment, 
+                                   type = c("median"))
+beta_dispersion_2022
+plot(beta_dispersion_2022)
+boxplot(beta_dispersion_2022, ylab = "Distance to median", xlab="")
+anova(beta_dispersion_2022)
+
+# Now create nonmetric multidimensional scaling ordinations (first for 2015):
+nmds_2015 <- metaMDS(dist_spp_space_2015, trymax = 500, k = 2)
+nmds_2015 # stress is quality of fit
+stressplot(nmds_2015)
+plot(nmds_2015) 
+
+# plot the 2015 NMDS model by treatment:
+ordiplot(nmds_2015, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds_2015, dis = "sites", select = which(carab_by_plot_2015_stdz$Treatment=="Forest"), pch = 15, cex = 1, col = "palegreen4")
+points(nmds_2015, dis = "sites", select = which(carab_by_plot_2015_stdz$Treatment=="Salvaged"), pch = 16, cex = 1, col = "brown4")
+points(nmds_2015, dis = "sites", select = which(carab_by_plot_2015_stdz$Treatment=="Windthrow"), pch = 17, cex = 1, col = "goldenrod2")
+ordiellipse(nmds_2015, carab_by_plot_2022_stdz$Treatment, draw = "lines", col = c("palegreen4", "brown4", "goldenrod2"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+legend("topleft", legend = c("Forest", "Salvaged", "Windthrow"),
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("palegreen4", "brown4", "goldenrod2"))
+
+# plot the 2015 NMDS model by area:
+ordiplot(nmds_2015, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds_2015, dis = "sites", select = which(carab_by_plot_2015_stdz$Area=="northeast"), pch = 15, cex = 1, col = "blue")
+points(nmds_2015, dis = "sites", select = which(carab_by_plot_2015_stdz$Area=="southwest"), pch = 16, cex = 1, col = "purple")
+ordiellipse(nmds_2015, carab_by_plot_2022_stdz$Area, draw = "lines", col = c("blue", "purple"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+legend("topleft", legend = c("northeast", "southwest"),
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("blue", "purple"))
+
+# Now create a NMDS ordination for 2022:
+nmds_2022 <- metaMDS(dist_spp_space_2022, trymax = 500, k = 2)
+nmds_2022 # stress is quality of fit
+stressplot(nmds_2022)
+plot(nmds_2022) 
+
+# plot the 2022 NMDS model by treatment:
+ordiplot(nmds_2022, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds_2022, dis = "sites", select = which(carab_by_plot_2022_stdz$Treatment=="Forest"), pch = 15, cex = 1, col = "palegreen4")
+points(nmds_2022, dis = "sites", select = which(carab_by_plot_2022_stdz$Treatment=="Salvaged"), pch = 16, cex = 1, col = "brown4")
+points(nmds_2022, dis = "sites", select = which(carab_by_plot_2022_stdz$Treatment=="Windthrow"), pch = 17, cex = 1, col = "goldenrod2")
+ordiellipse(nmds_2022, carab_by_plot_2022_stdz$Treatment, draw = "lines", col = c("palegreen4", "brown4", "goldenrod2"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+legend("topleft", legend = c("Forest", "Salvaged", "Windthrow"),
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("palegreen4", "brown4", "goldenrod2"))
+
+# plot the 2022 NMDS model by area:
+ordiplot(nmds_2022, disp = "sites", type = "n", xlim = c(-1.5, 1.5), ylim = c(-2, 2))
+points(nmds_2022, dis = "sites", select = which(carab_by_plot_2022_stdz$Area=="northeast"), pch = 15, cex = 1, col = "blue")
+points(nmds_2022, dis = "sites", select = which(carab_by_plot_2022_stdz$Area=="southwest"), pch = 16, cex = 1, col = "purple")
+ordiellipse(nmds_2022, carab_by_plot_2022_stdz$Area, draw = "lines", col = c("blue", "purple"), 
+            lwd = 3, kind = "sd", conf = 0.90, label = FALSE)
+legend("topleft", legend = c("northeast", "southwest"),
+       pch = c(15, 16, 17), cex = 1, bty = "n", col = c("blue", "purple"))
 
 # Investigate activity-abundance of open-habitat, eurytopic, and ###############
 # forest-specialist carabids 
@@ -488,6 +581,7 @@ carab_by_plot_2022_stdz_with_CWMs <- cbind(carab_by_plot_2022_stdz, CWMs_2015)
 # the plot-level data tables
 
 #write.csv(carab_by_plot_2015_stdz_with_CWMs, file="PNR2015_carabid_counts_by_plot_standardized.csv", row.names = F)
+
 # Observation: the capture rate of ground beetles in 2015 varied widely between
 # plots. One plot caught a ton of Chlaenius emarginatus and Pterostichus
 # moestus

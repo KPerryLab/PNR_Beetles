@@ -4,7 +4,7 @@
 # Powdermill Nature Reserve in the tornado/salvage areas
 
 library(ggplot2)
-theme_set(theme_classic)
+theme_set(theme_classic())
 library(dplyr)
 library(lubridate)
 
@@ -403,7 +403,7 @@ library(corrplot)
 corrplot::corrplot(cor_matrix_2015, method="number")
 
 # Run a PCA:
-pc_2015 <- prcomp(env_2015_by_plot[, c(vars_list)], center=T, scale. = T)
+pc_2015 <- prcomp(env_2015_by_plot_0[, c(vars_list)], center=T, scale. = T)
 
 library(factoextra)
 factoextra::get_eig(pc_2015)
@@ -425,10 +425,12 @@ pc_2015$rotation
 
 # Bind the PC axes to the data table of environmental variables:
 
-env_2015_by_plot <- bind_cols(env_2015_by_plot, data.frame(pc_2015$x))
+env_2015_by_plot <- bind_cols(env_2015_by_plot_0, data.frame(pc_2015$x))
 
-ggplot(data=env_2015_by_plot_1) + geom_point(aes(x=PC1, y=PC2, color=Treatment.x))
+ggplot(data=env_2015_by_plot) + geom_point(aes(x=PC1, y=PC2, color=Treatment), size=2)
 
+# The data seem to suggest that soil moisture varies independently from the 
+# forest management treatment.
 
 
 
