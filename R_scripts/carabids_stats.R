@@ -101,6 +101,7 @@ ggplot(dat_2022, aes(x=Treatment, y=open_habitat_spp_stdz + eurytopic_spp_stdz,
                      color=Transect, group=Transect)) + 
   geom_point(alpha=0.5) + geom_line(alpha=0.5)
 
+# Create the linear mixed-effects models:
 model_2015_oe <- lmerTest::lmer(open_habitat_spp_stdz + eurytopic_spp_stdz ~ Treatment + (1|Transect), 
                                    data = dat_2015)
 summary(model_2015_oe)
@@ -128,6 +129,61 @@ hist(ranef_brood_2015_oe$`(Intercept)`, breaks=10) # The estimated random interc
 ranef_brood_2022_oe <- ranef(model_2022_oe)$Transect
 hist(ranef_brood_2022_oe$`(Intercept)`, breaks=10) # not normally distributed
 
+# To remedy some of the heteroscedasticity, I'll take the log. Because there
+# are a couple of zeros in the 2015 data, I'll need to add 0.1 to the 2015 data before 
+# taking the log, in order to prevent taking log(0):
+
+dat_2015$log_open_eurytopic <- log(dat_2015$open_habitat_spp_stdz + 
+                                     dat_2015$eurytopic_spp_stdz + 0.1)
+
+dat_2022$log_open_eurytopic <- log(dat_2022$open_habitat_spp_stdz + 
+                                     dat_2022$eurytopic_spp_stdz)
+
+# Graph the data:
+ggplot(dat_2015, aes(x=Treatment, y=log_open_eurytopic, 
+                     color=Transect, group=Transect)) + 
+  geom_point(alpha=0.5) + geom_line(alpha=0.5)
+
+ggplot(dat_2022, aes(x=Treatment, y=log_open_eurytopic, 
+                     color=Transect, group=Transect)) + 
+  geom_point(alpha=0.5) + geom_line(alpha=0.5)
+
+# Create the linear mixed-effects models:
+model_2015_oe_2 <- lmerTest::lmer(log_open_eurytopic ~ Treatment + (1|Transect), 
+                                data = dat_2015)
+summary(model_2015_oe_2)
+
+model_2022_oe_2 <- lmerTest::lmer(log_open_eurytopic ~ Treatment + (1|Transect), 
+                                data = dat_2022)
+summary(model_2022_oe_2)
+
+# Run the anova tests to test the null hypothesis of no treatment differences:
+anova(model_2015_oe_2, type = 3)
+anova(model_2022_oe_2, type = 3)
+
+# Try to test the assumptions:
+# Homoscedasticity of variances across different levels of the fixed effect:
+plot(model_2015_oe_2)
+plot(model_2022_oe_2)
+
+# Normality of the residuals:
+qqnorm(residuals(model_2015_oe_2))
+qqline(residuals(model_2015_oe_2))
+
+qqnorm(residuals(model_2022_oe_2))
+qqline(residuals(model_2022_oe_2))
+
+# Normality of the estimated random effects (for each transect):
+ranef_brood_2015_oe_2 <- ranef(model_2015_oe_2)$Transect
+hist(ranef_brood_2015_oe_2$`(Intercept)`, breaks=10)
+
+ranef_brood_2022_oe_2 <- ranef(model_2022_oe_2)$Transect
+hist(ranef_brood_2022_oe_2$`(Intercept)`, breaks=10)
+
+# Because the 2015 model showed a significant effect of treatment, I'll need to
+# do pairwise comparisons between treatment groups:
+emmeans(model_2015_oe_2, pairwise~Treatment)
+
 # Activity-abundance of forest species models ##################################
 
 # graph the data:
@@ -146,6 +202,10 @@ ggplot(dat_2022, aes(x=Treatment, y=forest_specialist_spp_stdz,
 model_2015_f <- lmerTest::lmer(forest_specialist_spp_stdz ~ Treatment + (1|Transect), 
                                 data = dat_2015) # Singular fit
 summary(model_2015_f)
+# Why might this be a singular fit (which I think means the random effects 
+# could not be estimated)?
+dat_2015$forest_specialist_spp_stdz # there aren't any zeros in the data
+dat_2022$forest_specialist_spp_stdz
 
 model_2022_f <- lmerTest::lmer(forest_specialist_spp_stdz ~ Treatment + (1|Transect), 
                                 data = dat_2022)
@@ -155,7 +215,7 @@ anova(model_2015_f, type = 3)
 anova(model_2022_f, type = 3)
 
 plot(model_2015_f) # I'm seeing some heteroscedasticity
-plot(model_2022_f) # Also seeing some heteroscedasticity
+plot(model_2022_f)
 
 qqnorm(residuals(model_2015_f))
 qqline(residuals(model_2015_f))
@@ -168,6 +228,22 @@ hist(ranef_brood_2015_f$`(Intercept)`, breaks=10)
 
 ranef_brood_2022_f <- ranef(model_2022_f)$Transect
 hist(ranef_brood_2022_f$`(Intercept)`, breaks=10)
+
+# Take the log of the 2015 data to improve the heteroscedasticity:
+dat_2015$log_forest <- log(dat_2015$forest_specialist_spp_stdz)
+
+# Graph the data:
+ggplot(dat_2015, aes(x=Treatment, y=log_forest, 
+                     color=Transect, group=Transect)) + 
+  geom_point(alpha=0.5) + geom_line(alpha=0.5)
+
+model_2015_f_2 <- lmerTest::lmer(log_forest ~ Treatment + (1|Transect),
+                             data=dat_2015) # Still a singular fit
+summary(model_2015_f_2)
+
+anova(model_2015_f_2, type=3)
+
+plot(model_2015_f_2) # the heteroscedasticity looks better
 
 # Species richness models ######################################################
 
