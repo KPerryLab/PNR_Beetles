@@ -25,6 +25,10 @@ traits$Forest_affinity <- as.factor(traits$Forest_affinity)
 traits$Water_affinity <- as.numeric(traits$Water_affinity)
 traits$Flight_capability <- as.numeric(traits$Flight_capability)
 traits$Genus <- as.factor(traits$Genus)
+traits$Location_of_collection <- as.factor(traits$Location_of_collection)
+table(traits$Location_of_collection) # Most of the traits were measured from beetles
+# collected at Powdermill, but a few were measured from beetles collected in 
+# Erie and Cuyahoga counties, OH
 
 # Calculate some traits that are sums or differences of measurements ###########
 
@@ -134,6 +138,7 @@ ggplot(data=traits) + geom_point(aes(x=body_length, y=Eye_length), alpha=0.5) +
 
 # Does eye protrusion ratio need to be standardized to body length?
 ggplot(data=traits) + geom_point(aes(x=body_length, y=eye_protrusion_ratio), alpha=0.5)
+# No, the eye protrusion ratio doesn't seem to be tightly correlated with body length
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Pronotum_width), alpha=0.5)
 traits[which(traits$body_length > 20 & traits$Pronotum_width < 5),"Species"] # scaphinotus andrewsii
@@ -142,7 +147,6 @@ traits[which(traits$body_length > 17 & traits$Pronotum_width < 4),"Species"] # a
 # as Galerita bicolor
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Pronotum_length), alpha=0.5)
-traits[which(traits$body_length > 17 & traits$Pronotum_width < 3),"Species"] # Galerita bicolor
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Abdomen_width), alpha=0.5)
 traits[which(traits$Abdomen_width > 10),"Species"] # Scaphinotus viduus
@@ -152,6 +156,9 @@ traits[which(traits$body_length < 15 & traits$rear_leg_length > 13),"Species"] #
 # has very long legs
 
 ggplot(data=traits) + geom_point(aes(x=body_length, y=Rear_trochanter_length), alpha=0.5)
+
+# The following graph shows how eye protrusion is correlated with eye length:
+ggplot(data=traits) + geom_point(aes(x=eye_length_standard, y=eye_protrusion_standard), alpha=0.5)
 
 # How does eye protrusion ratio relate to eye length?
 ggplot(data=traits) + geom_point(aes(x=Eye_length, y=eye_protrusion_ratio), alpha=0.5) +
@@ -200,9 +207,6 @@ factoextra::fviz_pca_biplot(pc_modified, axes=c(1,2))
 factoextra::fviz_pca_biplot(pc_modified, axes=c(2,3))
 factoextra::fviz_pca_biplot(pc_modified, axes=c(3,4))
 pc_modified$rotation
-
-# I will wait to write down the results, because I need to check the data 
-# entry mistakes.
 
 # Append the PC axes onto the traits_per_indiv_modified table
 traits_by_spp_modified <- 
@@ -267,15 +271,35 @@ pc_without_Notiophilus <-
   prcomp(traits_by_spp_modified_without_N[, numeric_traits_modified], 
          center = T, scale. = T)
 
+plot(pc_without_Notiophilus)
+
 factoextra::get_eig(pc_without_Notiophilus)
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(2,3))
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2), repel=T, 
+                            geom.ind = c("point", "text"), 
+                            geom.var = c("arrow", "text"),
+                            title="PCA of ground beetle traits") + 
+  coord_fixed() + theme_classic() + 
+  scale_x_continuous(breaks = c(-3,-2,-1,0,1,2,3)) + 
+  scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16))
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(2,3), repel=T, 
+                            geom.ind = c("point", "text"), 
+                            geom.var = c("arrow", "text"),
+                            title="PCA of ground beetle traits") + 
+  coord_fixed() + theme_classic() + 
+  scale_x_continuous(breaks = c(-3,-2,-1,0,1,2,3)) + 
+  scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16))
 factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(3,4))
 factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(4,5))
 factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(5,6))
 pc_without_Notiophilus$rotation
 
-# Append the PC axes onto the traits_per_indiv_with_Notiophilus table:
+# Append the PC axes onto the traits_per_spp_without_Notiophilus table:
 traits_by_spp_modified_without_N_1 <- 
   bind_cols(traits_by_spp_modified_without_N, data.frame(pc_without_Notiophilus$x))
 
@@ -288,7 +312,8 @@ corrplot::corrplot(cor_matrix2, method="number")
 # Now I'd like to project Notiophilus onto the PC axes I found, so I can still
 # include the species:
 Notiophilus_traits_0 <- 
-  traits_by_spp_modified[traits_by_spp_modified$Species == "Notiophilus_aeneus", ]
+  traits_by_spp_modified[traits_by_spp_modified$Species == "Notiophilus_aeneus", 
+                         c("Species", "Genus", trait_list_modified)]
 
 # center and scale:
 Notiophilus_traits <- Notiophilus_traits_0
@@ -321,10 +346,16 @@ Notiophilus_traits$PC8 <-
   geometry::dot(as.data.frame(pc_without_Notiophilus$rotation)$PC8,
                 c(t(Notiophilus_traits[numeric_traits_modified])))
 
-# Join the Notiophilus data back onto the trait data table
+# I want to keep the uncentered, unscaled trait data for the final data table,
+# but use the projected PC values:
+Notiophilus_traits_1 <- Notiophilus_traits
+Notiophilus_traits_1[,trait_list_modified] <- 
+  Notiophilus_traits_0[,trait_list_modified] # Moving the uncentered unscaled data
+# back into the dataframe
 
-colnames(Notiophilus_traits) == colnames(traits_by_spp_modified_without_N_1)
-combined_0 <- rbind(Notiophilus_traits, traits_by_spp_modified_without_N_1)
+# Join the Notiophilus data back onto the trait data table:
+colnames(Notiophilus_traits_1) == colnames(traits_by_spp_modified_without_N_1) # column names are the same
+combined_0 <- rbind(Notiophilus_traits_1, traits_by_spp_modified_without_N_1)
 
 # rearrange the rows:
 combined <- combined_0 %>% arrange(Species)
@@ -335,17 +366,37 @@ ggplot(data=combined, aes(x=PC1, y=PC2, label=Species)) + geom_point() +
 ggplot(data=combined, aes(x=PC2, y=PC3, label=Species)) + geom_point() + 
   geom_text(alpha=0.5)+ coord_fixed()
 ggplot(data=combined, aes(x=PC3, y=PC4, label=Species)) + geom_point() + 
-  geom_text(alpha=0.5)+ coord_fixed()
-# Looks good
+  geom_text(alpha=0.5)+ coord_fixed() # Looks good
+
+# Add back in the standardized antenna length (because I want to look at the 
+# CWM antenna length):
+traits_by_spp_antenna <- traits %>% group_by(Species) %>% 
+  summarise(Species=first(Species),
+            antenna_length_standard = mean(antenna_length_standard))
+traits_by_spp_antenna$Species == combined$Species
+
+combined$antenna_length_standard <- traits_by_spp_antenna$antenna_length_standard
+
+# Add back in the standardized eye protrusion (because I want to look at the 
+# CWM eye protrusion):
+traits_by_spp_eye_protrusion <- traits %>% group_by(Species) %>% 
+  summarise(Species=first(Species),
+            eye_protrusion_standard = mean(eye_protrusion_standard))
+traits_by_spp_eye_protrusion$Species == combined$Species
+
+combined$eye_protrusion_standard <- traits_by_spp_eye_protrusion$eye_protrusion_standard
+
+# Export a table of the PC rotation (loading values):
+
+#write.csv(pc_without_Notiophilus$rotation, "Aaron_PNR_formatted_data/PCA_traits_loadings.csv")
 
 # Export a data table of traits ###############################################
 
-write.csv(combined, 
-          "PNR_carabid_traits_by_spp.csv", row.names = F)
+#write.csv(combined, "Aaron_PNR_formatted_data/PNR_carabid_traits_by_spp.csv", row.names = F)
 
 # Distance matrix incorporating water affinity and flight capability: #########
 
-# Use Gower distance (see Swenson), incorporating PC1 through PC5, and 
+# Use Gower distance (see Swenson), incorporating PC1 through PC4, and 
 # water affinity and Flight capability
 combined$Water_affinity <- factor(combined$Water_affinity, order = T, 
                                      levels = c(0,0.5,1))
@@ -370,10 +421,13 @@ gower_dist_dataframe <- as.data.frame(as.matrix(gower_dist))
 
 colnames(gower_dist_dataframe) <- traits_by_spp_modified$Species
 
-#write.csv(gower_dist_dataframe, file="carabid_dist_in_trait_space.csv", row.names = F)
+#write.csv(gower_dist_dataframe, file="Aaron_PNR_formatted_data/carabid_dist_in_trait_space.csv", row.names = F)
 
+# Investigate trochanters of various species: ##################################
 
-
+trochanter_ranking <- 
+  traits_by_spp_modified %>% select(Species, rear_trochanter_length_standard) %>%
+  arrange(rear_trochanter_length_standard)
 
 
 

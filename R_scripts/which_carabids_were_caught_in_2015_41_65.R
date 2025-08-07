@@ -32,8 +32,8 @@ dat_2015_subset_drop_columns <- dat_2015_subset %>%
   select(all_of(columns_to_keep))
 
 # write a csv file with the subsetted data table:
-write.csv(dat_2015_subset_drop_columns, 
-          file="PNR2015_subset_carabid_counts.csv", row.names=FALSE)
+#write.csv(dat_2015_subset_drop_columns, 
+#          file="PNR2015_subset_carabid_counts.csv", row.names=FALSE)
 
 
 

@@ -1,5 +1,5 @@
 # Aaron Tayal
-# Sept 24, 2024 updated Apr 22, 2025
+# Sept 24, 2024 updated Apr 22, 2025, updated July 23, 2025
 # Exploratory data visualization of environmental variables recorded at 
 # Powdermill Nature Reserve in the tornado/salvage areas
 
@@ -7,6 +7,7 @@ library(ggplot2)
 theme_set(theme_classic())
 library(dplyr)
 library(lubridate)
+library(corrplot) # for correlation matrices
 
 # Soil moisture 2022 ################################################################
 
@@ -76,7 +77,7 @@ cover_2022 <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_percent_cover_P
 # July, August, and September
 
 cover_2022$Treatment <- as.factor(cover_2022$Treatment)
-cover_2022$Plot <- as.factor(cover_2022$Plot)
+cover_2022$Plot <- as.integer(cover_2022$Plot)
 cover_2022$Date1 <- (ymd(cover_2022$Date_yyyy.mm.dd))
 cover_2022$day_of_year <- yday(cover_2022$Date_yyyy.mm.dd)
 
@@ -182,21 +183,32 @@ ggplot(data=cover_2022_by_plot, aes(x=Treatment, y=VegHtAvg)) +
 
 # Canopy openness 2022 #############################################################
 
-densi_2022 <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_canopy_openness_PNR_ENV_2022.csv")
-densi_2022$Treatment <- as.factor(densi_2022$Treatment)
+densi_2022_by_plot <- read.csv("Aaron_PNR_formatted_data/Aaron_formatted_canopy_openness_PNR_ENV_2022.csv")
+densi_2022_by_plot$Treatment <- as.factor(densi_2022_by_plot$Treatment)
 
 # How does canopy openness vary by treatment?
-ggplot(data=densi_2022, aes(x=Treatment, y=Densi.Total)) +
+ggplot(data=densi_2022_by_plot, aes(x=Treatment, y=Densi.Total)) +
   geom_jitter(alpha=0.5, width=0.05, height=0) 
 # Plot 49 has a very open canopy
 
-ggplot(data=densi_2022, aes(x=Treatment, y=Densi.Total)) +
+# limiting the y-axis:
+ggplot(data=densi_2022_by_plot, aes(x=Treatment, y=Densi.Total)) +
   geom_jitter(alpha=0.5, width=0.05, height=0) +
   ylim(0,20)
 # Also, some of the other salvaged and windthrow plots have slightly
 # higher canopy openness than all the other forest plots. But it seems like any
 # differences in canopy openness have mostly disappeared by 2022, except for 
 # plot 49
+
+# Combine 2022 environmental data into a single data table ####################
+
+env_2022_by_plot_0 <- full_join(soil_moisture_2022_by_plot, 
+                                densi_2022_by_plot %>% select(-Treatment), 
+                                by="Plot")
+
+env_2022_by_plot <- full_join(env_2022_by_plot_0, 
+                              cover_2022_by_plot %>% select(-Treatment),
+                              by="Plot")
 
 # Soil moisture and temperature 2015 ##########################################
 
@@ -233,6 +245,8 @@ ggplot(data=soil_moisture_temp_2015, aes(x=Day,
                                     y=SoilMoistAvrg)) +
   geom_point(alpha=0.5) + theme_classic()
 # Looks like the soil moisture strongly decreased over the season in 2015.
+# This is likely connected to a lack of precipitation in the late summer in
+# 2015.
 # Note: the spacing between measurement dates is not to scale
 
 # How did soil temp change over the season in 2015?
@@ -261,7 +275,7 @@ ggplot(data=soil_moisture_temp_2015_by_plot, aes(x=Treatment, y=mean_moisture)) 
 # Graph soil temp in 2015 by plot:
 ggplot(data=soil_moisture_temp_2015_by_plot, aes(x=Treatment, y=mean_temp)) +
   geom_jitter(height=0, width=0.1, alpha=0.5)
-# Some of the windthrow and salvaged plots had higher mean temp for 2015.
+# Some of salvaged plots had higher mean temp for 2015.
 
 # Ground cover 2015 ############################################################
 
@@ -389,21 +403,31 @@ ggplot(data=cover_2015_by_plot, aes(x=Treatment, y=canopy_openness)) +
 # Kayla's pHD found that salvaged plots in 2015 either had high soil moisture
 # and temp levels, or lower soil moisture and dense ground-level vegetation
 
+# Combine 2015 environmental data into one data table ##########################
+
 # Join the moisture and temp data to the other data
 cover_2015_by_plot_1 <- cover_2015_by_plot %>% select(-Treatment)
-env_2015_by_plot_0 <- full_join(soil_moisture_temp_2015_by_plot, cover_2015_by_plot_1, 
+env_2015_by_plot <- full_join(soil_moisture_temp_2015_by_plot, cover_2015_by_plot_1, 
                               by="Plot")
 
-vars_list <- c("mean_moisture", "mean_temp", "canopy_openness", "VegAvg", 
-               "LitterAvg", "FWDAvg", "CWDAvg", "RockAvg","VegHtAvg", 
-               "Elev_ft")
+# 2015 dimension reduction #####################################################
 
-cor_matrix_2015 <- cor(env_2015_by_plot_0[, vars_list])
-library(corrplot)
+# An initial list of variables to possibly analyze:
+vars_list_2015_init <- c("canopy_openness", "mean_moisture", "VegHtAvg", "VegAvg", 
+               "LitterAvg", "BareGAvg", "FWDAvg", "CWDAvg", "RockAvg")
+
+# Examine correlation matrix
+cor_matrix_2015_init <- cor(env_2015_by_plot[, vars_list_2015_init])
+corrplot::corrplot(cor_matrix_2015_init, method="number")
+
+# Remove leaf litter and vegetation:
+vars_list_2015 <- c("canopy_openness", "mean_moisture", "VegHtAvg", "VegAvg", 
+                    "LitterAvg", "BareGAvg", "FWDAvg", "CWDAvg", "RockAvg")
+cor_matrix_2015 <- cor(env_2015_by_plot[, vars_list_2015])
 corrplot::corrplot(cor_matrix_2015, method="number")
 
 # Run a PCA:
-pc_2015 <- prcomp(env_2015_by_plot_0[, c(vars_list)], center=T, scale. = T)
+pc_2015 <- prcomp(env_2015_by_plot[, c(vars_list_2015)], center=T, scale. = T)
 
 library(factoextra)
 factoextra::get_eig(pc_2015)
@@ -411,23 +435,10 @@ factoextra::fviz_pca_biplot(pc_2015, axes=c(1,2))
 factoextra::fviz_pca_biplot(pc_2015, axes=c(2,3))
 factoextra::fviz_pca_biplot(pc_2015, axes=c(3,4))
 pc_2015$rotation
-# PC1 is associated with high leaf litter and lower canopy openness, and lower
-# vegetation cover, as well as a few other variables
 
-# PC2 is associated with high soil moisture and low elevation
+env_2015_by_plot_1 <- bind_cols(env_2015_by_plot, data.frame(pc_2015$x))
 
-# PC3 is associated with low rock cover and high amounts of fine woody debris
-# and higher vegetation height
-
-# PC4 is associated with higher amounts of coarse woody debris
-
-# Together, the first four PC axes explain 77% of the variance
-
-# Bind the PC axes to the data table of environmental variables:
-
-env_2015_by_plot <- bind_cols(env_2015_by_plot_0, data.frame(pc_2015$x))
-
-ggplot(data=env_2015_by_plot) + geom_point(aes(x=PC1, y=PC2, color=Treatment), size=2)
+ggplot(data=env_2015_by_plot_1) + geom_point(aes(x=PC1, y=PC2, color=Treatment), size=2)
 
 # The data seem to suggest that soil moisture varies independently from the 
 # forest management treatment.

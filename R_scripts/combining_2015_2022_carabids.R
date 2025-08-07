@@ -33,7 +33,11 @@ dat2015 <- read.csv("Aaron_PNR_formatted_data/PNR2015_subset_carabid_counts.csv"
 dat2022 <- read.csv("Aaron_PNR_formatted_data/PNR2022_carabid_counts.csv",
                     na.strings = "NA", colClasses = "character")
 
-all.equal(colnames(dat2022), colnames(dat2015))# good, the columns match
+all.equal(colnames(dat2022), colnames(dat2015)) # UPDATE 8/5/2025: for some reason
+# the 2015 dataset only has the columns for species found in 2015. So this 
+# script is not working now. It's OK because I already have the combined
+# dataset as a csv file. I think I must have manually added the species 
+# columns to make them match up.
 
 carab_spp <- colnames(dat2022)[7:63]
 
@@ -74,32 +78,9 @@ carab$Plot == 65
 carab$Plot[carab$Plot == 65] <- 63
 carab$Plot
 
-# Investigate final two collection intervals of 2022 ########################
-
-# What carabid species were found in the final two collection intervals
-# of 2022?
-dat2022_final_2_int <- carab %>% filter(Year==2022 & Interval > 6)
-colSums(dat2022_final_2_int[,carab_spp], na.rm=T)
-# This makes me curious to investigate the seasonal trends of carabids more.
-
-# What carabid species were found in the first six collection intervals
-# of 2022?
-dat2022_first_6_int <- carab %>% filter(Year==2022 & Interval < 7)
-colSums(dat2022_first_6_int[,carab_spp], na.rm=T)
-
-# It seems like different kinds of carabids are being caught in September,
-# compared to the previous months. For instance: here is Platynus angustatus:
-
-carab %>% filter(Year==2022) %>% ggplot(aes(x=Set_date, y=Platynus_angustatus)) +
-  geom_point(alpha=0.2)
-carab %>% filter(Year==2015) %>% ggplot(aes(x=Set_date, y=Platynus_angustatus)) +
-  geom_point(alpha=0.2) # Because Platynus angustatus is mostly caught in 
-# August and September, the fact that the 2022 sampling season extends into
-# September means that 2015 and 2022 are not comparable.
-
 # Write a data table: #######################################################
 
-write.csv(carab, "PNR2015_2022_carabid_counts.csv", row.names = FALSE)
+#write.csv(carab, "PNR2015_2022_carabid_counts.csv", row.names = FALSE)
 
 
 
