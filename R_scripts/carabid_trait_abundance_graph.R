@@ -19,6 +19,7 @@ c2022 <- read.csv("Aaron_PNR_formatted_data/PNR2022_carabid_counts_by_plot_stand
 traits <- read.csv("Aaron_PNR_formatted_data/PNR_carabid_traits_by_spp.csv")
 
 spp <- traits$Species
+traits$species_short <- sub(".*_", "", traits$Species)
 
 # Compute the total activity-abundance of each species (for each year)
 traits$abundance_2015 <- colSums(c2015[,spp])
@@ -65,29 +66,70 @@ traits_long_2022 <- pivot_longer(traits, cols = c("rel_ab_2022_Forest",
 
 # Plot a graphs:
 
-ggplot(traits_long_2015) + geom_arc_bar(aes(x0 = PC1, y0 = PC2, r0 = 0, 
+ggplot(traits_long_2015 %>% filter(Species != "Notiophilus_aeneus")) + geom_arc_bar(aes(x0 = PC1, y0 = PC2, r0 = 0, 
                                             r = sqrt(abundance_2015)/3, 
                                             amount = relative_abundance_2015, 
-                                            fill = Treatment,
-                                            ),
-                                        stat = "pie",
-                                        alpha=0.4) +
+                                            fill = Treatment), stat = "pie", alpha=0.4) +
   coord_fixed() + theme_classic() + xlab("PC1") + ylab("PC2") +
   scale_y_continuous(breaks=seq(-3, 3, 1)) +
   scale_fill_manual(values = c("Forest" = "palegreen4", "Salvaged" = "brown4", 
-                               "Windthrow" = "goldenrod2"))
-  #geom_text(data=traits, aes(x=PC1,y=PC2,label=Species, alpha=abundance_2015/2.3264))
+                               "Windthrow" = "goldenrod2"))+
+  geom_text(data=traits %>% filter(Species != "Notiophilus_aeneus"), aes(x=PC1,y=PC2,label=species_short, size=abundance_2015))
 
-ggplot(traits_long_2022) + geom_arc_bar(aes(x0 = PC1, y0 = PC2, r0 = 0, 
-                                            r = sqrt(abundance_2022)/3, 
-                                            amount = relative_abundance_2022, 
-                                            fill = Treatment),
-stat = "pie",
-alpha=0.4) +
+ggplot(traits_long_2022 %>% filter(Species != "Notiophilus_aeneus")) + geom_arc_bar(aes(x0 = PC1, y0 = PC2, r0 = 0, 
+                                                                                        r = sqrt(abundance_2022)/3, 
+                                                                                        amount = relative_abundance_2022, 
+                                                                                        fill = Treatment), stat = "pie", alpha=0.4) +
   coord_fixed() + theme_classic() + xlab("PC1") + ylab("PC2") +
   scale_y_continuous(breaks=seq(-3, 3, 1)) +
   scale_fill_manual(values = c("Forest" = "palegreen4", "Salvaged" = "brown4", 
-                               "Windthrow" = "goldenrod2"))
+                               "Windthrow" = "goldenrod2"))+
+  geom_text(data=traits %>% filter(Species != "Notiophilus_aeneus"), aes(x=PC1,y=PC2,label=species_short, size=abundance_2022))
+
+
+ggplot(data = traits_long_2015 %>% filter(Species != "Notiophilus_aeneus")) + 
+  geom_arc_bar(aes(x0 = rear_trochanter_length_standard, 
+                                            y0 = eye_length_standard, r0 = 0, 
+                                            r = sqrt(abundance_2015)/300, 
+                                            amount = relative_abundance_2015, 
+                                            fill = Treatment), stat = "pie", alpha=0.4) +
+  coord_fixed() + theme_classic() + xlab("Standardized rear trochanter length") + ylab("Standardized eye length") +
+  scale_y_continuous(breaks=seq(-3, 3, 1)) +
+  scale_fill_manual(values = c("Forest" = "palegreen4", "Salvaged" = "brown4", 
+                               "Windthrow" = "goldenrod2"))+geom_text(data=traits%>% filter(Species != "Notiophilus_aeneus"), aes(x=rear_trochanter_length_standard,y=eye_length_standard,label=Species, alpha=abundance_2015/2.3264))
+
+ggplot(data = traits_long_2022 %>% filter(Species != "Notiophilus_aeneus")) + 
+  geom_arc_bar(aes(x0 = rear_trochanter_length_standard, 
+                   y0 = eye_length_standard, r0 = 0, 
+                   r = sqrt(abundance_2022)/300, 
+                   amount = relative_abundance_2022, 
+                   fill = Treatment), stat = "pie", alpha=0.4) +
+  coord_fixed() + theme_classic() + xlab("Standardized rear trochanter length") + ylab("Standardized eye length") +
+  scale_y_continuous(breaks=seq(-3, 3, 1)) +
+  scale_fill_manual(values = c("Forest" = "palegreen4", "Salvaged" = "brown4", 
+                               "Windthrow" = "goldenrod2"))+geom_text(data=traits%>% filter(Species != "Notiophilus_aeneus"), aes(x=rear_trochanter_length_standard,y=eye_length_standard,label=Species, alpha=abundance_2022/2.3264))
+
+
+# Graphs of flight capable vs. flight incapable beetles ########################
+
+
+
+ggplot(data=traits %>% filter(Species != "Notiophilus_aeneus"),
+       aes(x=PC1, y=PC2, size=abundance_2015,
+           color=Flight_capability)) + geom_point(alpha=0.5) + 
+  geom_text(aes(label = species_short))
+
+ggplot(data=traits %>% filter(Species != "Notiophilus_aeneus"),
+       aes(x=PC1, y=PC2, size=abundance_2022,
+           color=Flight_capability)) + geom_point(alpha=0.5) + 
+  geom_text(aes(label = species_short))
+
+
+
+
+
+
+
 
 
 

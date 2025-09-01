@@ -29,6 +29,28 @@ traits$Location_of_collection <- as.factor(traits$Location_of_collection)
 table(traits$Location_of_collection) # Most of the traits were measured from beetles
 # collected at Powdermill, but a few were measured from beetles collected in 
 # Erie and Cuyahoga counties, OH
+traits$Species <- as.factor(traits$Species)
+
+# Make an abbreviation for Genus and species: ##################################
+
+species <- c("Homo_sapiens", "Canis_lupis", "Pan_troglodytes")
+
+# Function to abbreviate
+abbrev_species <- function(x) {
+  parts <- strsplit(x, "_")[[1]]
+  genus <- parts[1]
+  species <- parts[2]
+  paste0(substr(genus, 1, 2), ".", substr(species, 1, 2))
+}
+
+abbreviations <- sapply(species, abbrev_species)
+abbreviations
+
+
+traits$Species_char <- as.character(traits$Species)
+traits <- traits %>% mutate(spp_abbrev = sapply(Species_char, abbrev_species))
+
+
 
 # Calculate some traits that are sums or differences of measurements ###########
 
@@ -155,7 +177,8 @@ ggplot(data=traits) + geom_point(aes(x=body_length, y=rear_leg_length), alpha=0.
 traits[which(traits$body_length < 15 & traits$rear_leg_length > 13),"Species"] # Platynus angustatus
 # has very long legs
 
-ggplot(data=traits) + geom_point(aes(x=body_length, y=Rear_trochanter_length), alpha=0.5)
+ggplot(data=traits) + geom_point(aes(x=body_length, y=Rear_trochanter_length,
+                                     color=Genus), alpha=0.5)
 
 # The following graph shows how eye protrusion is correlated with eye length:
 ggplot(data=traits) + geom_point(aes(x=eye_length_standard, y=eye_protrusion_standard), alpha=0.5)
@@ -169,11 +192,29 @@ ggplot(data=traits) + geom_point(aes(x=rear_leg_length, y=antenna_rear_leg_ratio
 # Observation: the antennae measurements are likely more variable due to the 
 # difficulties in measuring antenna length
 
+# Look at standardized rear trochanter length in relation to standardized 
+# rear leg length:
+ggplot(data=traits) + geom_point(aes(x=rear_leg_length_standard, 
+                                     y=rear_trochanter_length_standard), alpha=0.5)
+
+# Look at standardized rear trochanter length in relation to standardized 
+# antenna length:
+ggplot(data=traits) + geom_point(aes(x=antenna_length_standard, 
+                                     y=rear_trochanter_length_standard), alpha=0.5)
+
+# Look at stdzd pronotum width in relation to stdzd rear leg length:
+ggplot(data=traits) + geom_point(aes(x=rear_leg_length_standard, 
+                                     y=pronotum_width_standard), alpha=0.5)
+
+# Look at stdzd rear trochanter length in relation to stdzd pronotum width:
+ggplot(data=traits) + geom_point(aes(x=pronotum_width_standard, 
+                                     y=rear_trochanter_length_standard), alpha=0.5)
+
 # MODIFIED VERSION Average the values of the (up to) six individuals ###########
 
-traits$Species <- as.factor(traits$Species)
 traits_by_spp_modified <- traits %>% group_by(Species) %>%
   summarize(Genus = first(Genus),
+            spp_abbrev = first(spp_abbrev),
             across(all_of(numeric_traits_modified), ~ mean(., na.rm=T)),
             Forest_affinity = first(Forest_affinity),
             Water_affinity = first(Water_affinity),
@@ -275,17 +316,19 @@ plot(pc_without_Notiophilus)
 
 factoextra::get_eig(pc_without_Notiophilus)
 factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2), repel=T, 
-                            geom.ind = c("point", "text"), 
+                            geom.ind = c("point"), 
                             geom.var = c("arrow", "text"),
-                            title="PCA of ground beetle traits") + 
+                            title="") + 
   coord_fixed() + theme_classic() + 
   scale_x_continuous(breaks = c(-3,-2,-1,0,1,2,3)) + 
   scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
   theme(plot.title = element_text(size = 20),
         axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))
-factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(2,3), repel=T, 
-                            geom.ind = c("point", "text"), 
+        axis.title.y = element_text(size = 16)) +
+  xlab("PC1 (31%)") + ylab("PC2 (25%)")
+  
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,3), repel=T, 
+                            geom.ind = c("point", "text"),
                             geom.var = c("arrow", "text"),
                             title="PCA of ground beetle traits") + 
   coord_fixed() + theme_classic() + 
@@ -308,6 +351,41 @@ cor_matrix2 <- cor(na.omit(traits_by_spp_modified_without_N_1[, c(12:16)]), meth
 corrplot::corrplot(cor_matrix2, method="number")
 # PC2 is somewhat correlated with Flight capability, because smaller species
 # with proportionally bigger eyes are likely to be flight capable.
+
+# Make a finalized graph of the first two PC axes:
+# First, make a list of species caught in the first 6 intervals (in either 2015 or 2022):
+species_2015_2022_1st_6 <- c("Agonum_ferreum", "Agonum_fidele", "Agonum_retractum", "Amphasia_interstitialis", "Anisodactylus_harrisii", "Anisodactylus_melanopus", "Anisodactylus_nigerrimus", "Carabus_goryi", "Chlaenius_emarginatus", "Chlaenius_laticollis", "Cyclotrachelus_convivus", "Cyclotrachelus_fucatus", "Cyclotrachelus_sigillatus", "Dicaelus_politus", "Dicaelus_teter", "Harpalus_spadiceus", "Notiobia_nitidipennis", "Notiophilus_aeneus", "Olisthopus_parmatus", "Platynus_angustatus", "Platynus_tenuicollis", "Pseudamara_arenaria", "Pterostichus_adoxus", "Pterostichus_coracinus", "Pterostichus_corvinus", "Pterostichus_diligendus", "Pterostichus_lachrymosus", "Pterostichus_melanarius", "Pterostichus_moestus", "Pterostichus_mutus", "Pterostichus_rostratus", "Pterostichus_stygicus", "Pterostichus_tristis", "Scaphinotus_viduus", "Sphaeroderus_canadensis", "Sphaeroderus_stenostomus", "Trichotichnus_autumnalis", "Agonoleptus_thoracicus", "Apenes_lucidula", "Cymindis_limbata", "Cymindis_platicollis", "Galerita_bicolor", "Lophoglossus_scrutator", "Platynus_decentis", "Pterostichus_hamiltoni", "Pterostichus_sayanus", "Scaphinotus_imperfectus")
+
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,2), repel=T, 
+                            geom.ind = "none", 
+                            geom.var = c("arrow", "text"),
+                            title="") + 
+  coord_fixed() + theme_classic() + 
+  scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)) +
+  xlab("PC1 (31%)") + ylab("PC2 (25%)") +
+  geom_text(data=traits_by_spp_modified_without_N_1 %>% 
+              filter(Species %in% species_2015_2022_1st_6), 
+            aes(x=PC1, y=PC2, label=spp_abbrev, color=antenna_rear_leg_ratio),
+            size=3) + scale_x_continuous(limits = c(-4,4), breaks = c(-4,-3,-2,-1,0,1,2,3,4))
+
+# Now for PC1 vs PC3:
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,3), repel=T, 
+                            geom.ind = "none", 
+                            geom.var = c("arrow", "text"),
+                            title="") + 
+  coord_fixed() + theme_classic() + 
+  scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)) +
+  xlab("PC1 (31%)") + ylab("PC3 (16%)") +
+  geom_text(data=traits_by_spp_modified_without_N_1 %>% 
+              filter(Species %in% species_2015_2022_1st_6), 
+            aes(x=PC1, y=PC3, label=spp_abbrev),
+            size=3) + scale_x_continuous(limits = c(-4,4), breaks = c(-4,-3,-2,-1,0,1,2,3,4))
 
 # Now I'd like to project Notiophilus onto the PC axes I found, so I can still
 # include the species:
@@ -363,10 +441,9 @@ combined <- combined_0 %>% arrange(Species)
 # Graph it for a reality check:
 ggplot(data=combined, aes(x=PC1, y=PC2, label=Species)) + geom_point() + 
   geom_text(alpha=0.5) + coord_fixed()
-ggplot(data=combined, aes(x=PC2, y=PC3, label=Species)) + geom_point() + 
+ggplot(data=combined, aes(x=PC1, y=PC3, label=Species)) + geom_point() + 
   geom_text(alpha=0.5)+ coord_fixed()
-ggplot(data=combined, aes(x=PC3, y=PC4, label=Species)) + geom_point() + 
-  geom_text(alpha=0.5)+ coord_fixed() # Looks good
+ # Looks good
 
 # Add back in the standardized antenna length (because I want to look at the 
 # CWM antenna length):
@@ -426,9 +503,36 @@ colnames(gower_dist_dataframe) <- traits_by_spp_modified$Species
 # Investigate trochanters of various species: ##################################
 
 trochanter_ranking <- 
-  traits_by_spp_modified %>% select(Species, rear_trochanter_length_standard) %>%
+  combined %>% select(Species, rear_trochanter_length_standard) %>%
   arrange(rear_trochanter_length_standard)
 
+# Species like Carabus goryi, Dicaelus teter, Sphaeroderus stenostomus,
+# Notiophilus aeneus, Platynus angustatus, have short trochanters. Species like 
+# Cyclotrachelus, Chlaenius, Harpalus spadiceous, Myas, have longer rear 
+# trochanters.
 
+# Investigate eye flatness of various species: ##################################
+
+eye_flatness_ranking <- 
+  combined %>% select(Species, eye_protrusion_ratio) %>%
+  arrange(eye_protrusion_ratio)
+
+# I'm starting to think that the eye protrusion ratio is silly and doesn't have 
+# much biological meaning. For one, the "eye protrusion" sometimes just
+# measures if the beetle's eyes are on the side of its head vs. on the top
+
+# Investigate antenna:rear leg ratio of various species: ######################
+
+antenna_to_rear_leg_ranking <- 
+  combined %>% select(Species, antenna_rear_leg_ratio) %>%
+  arrange(antenna_rear_leg_ratio)
+
+hist(antenna_to_rear_leg_ranking$antenna_rear_leg_ratio)
+
+# Further investigate trait relationships: #####################################
+
+ggplot(data=combined, aes(x=antenna_length_standard, y=rear_trochanter_length_standard,
+       label=Species)) + 
+  geom_point(alpha=0.5) + geom_text()
 
 

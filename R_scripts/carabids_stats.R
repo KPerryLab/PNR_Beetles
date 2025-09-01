@@ -4,9 +4,13 @@
 
 # The purpose is to create linear mixed-effects models to investigate
 # metrics of ground beetle activity-abundance, species richness, Shannon
-# diversity, and functional alpha diversity, and whether these variables
-# differ between plots that were salvaged, windthow-affected, or forest control.
-# And whether they differ between 2015 and 2022.
+# diversity, functional alpha diversity, and community-weighted means, and 
+# whether these variables differ between plots that were salvaged, 
+# just windthow-affected, or forest control. And whether they differ between 
+# 2015 and 2022.
+
+# I'll also look at some environmental variables such as soil moisture,
+# percent vegetation cover, and canopy openness
 
 library(ggplot2)
 theme_set(theme_classic())
@@ -19,6 +23,9 @@ library(emmeans) # Estimated Marginal Means, aka Least Squares Means (enables
 library(ggbeeswarm) # an alternative to geom_jitter is geom_quasirandom()
 library(ggpubr) # used for making pretty graphs
 library(sjPlot) # used to plot models
+library(gridExtra) # used for arranging graphs properly
+library(plotrix) # for standard error function
+library(dplyr)
 
 dat <- read.csv("Aaron_PNR_formatted_data/PNR2015_2022_carabid_counts_by_plot_standardized.csv")
 
@@ -346,21 +353,21 @@ anova(model_rear_leg_length_standard, type=3)
 # Graph the data:
 ggplot(dat, aes(x=Year_Treatment, y=antenna_rear_leg_ratio)) + geom_quasirandom(alpha=0.5, width=0.1)
 
-# I'll now create models using linear mixed-effects models:
-model_antenna_rear_leg_ratio <- lmerTest::lmer(antenna_rear_leg_ratio ~ Treatment + Year + Treatment*Year +
-                                                   (1|Transect), data = dat)
+# I'll now create models using linear model (the LMM had a singular fit):
+model_antenna_rear_leg_ratio <- lm(antenna_rear_leg_ratio ~ Treatment + Year + Treatment*Year, 
+                                   data = dat)
 summary(model_antenna_rear_leg_ratio)
 
 # plot the model:
 plot_model(model_antenna_rear_leg_ratio, type = "pred", terms = c("Treatment", "Year"))
 
 # test assumptions:
-plot(model_antenna_rear_leg_ratio)
+#plot(model_antenna_rear_leg_ratio)
 qqnorm(residuals(model_antenna_rear_leg_ratio))
 qqline(residuals(model_antenna_rear_leg_ratio))
 
 # run the ANOVA test:
-anova(model_antenna_rear_leg_ratio, type=3)
+anova(model_antenna_rear_leg_ratio)
 
 # eye_length_standard ##########################################################################
 
@@ -414,7 +421,7 @@ ggplot(dat, aes(x=Year_Treatment, y=eye_protrusion_ratio)) + geom_quasirandom(al
 
 # I'll now create models using linear mixed-effects models:
 model_eye_protrusion_ratio <- lmerTest::lmer(eye_protrusion_ratio ~ Treatment + Year + Treatment*Year +
-                                              (1|Transect), data = dat)
+                                                  (1|Transect), data = dat)
 summary(model_eye_protrusion_ratio)
 
 # plot the model:
@@ -428,116 +435,328 @@ qqline(residuals(model_eye_protrusion_ratio))
 # run the ANOVA test:
 anova(model_eye_protrusion_ratio, type=3)
 
-# pairwise comparisons:
+# Test pairwise comparisons:
 emmeans(model_eye_protrusion_ratio, pairwise~Treatment)
 
+# pronotum_width_standard ##########################################################################
 
+# Graph the data:
+ggplot(dat, aes(x=Year_Treatment, y=pronotum_width_standard)) + geom_quasirandom(alpha=0.5, width=0.1)
 
+# I'll now create models using linear mixed-effects models:
+model_pronotum_width_standard <- lmerTest::lmer(pronotum_width_standard ~ Treatment + Year + Treatment*Year +
+                                              (1|Transect), data = dat)
+summary(model_pronotum_width_standard)
+
+# plot the model:
+plot_model(model_pronotum_width_standard, type = "pred", terms = c("Treatment", "Year"))
+
+# test assumptions:
+plot(model_pronotum_width_standard)
+qqnorm(residuals(model_pronotum_width_standard))
+qqline(residuals(model_pronotum_width_standard))
+
+# run the ANOVA test:
+anova(model_pronotum_width_standard, type=3)
+
+# abdomen_width_standard ##########################################################################
+
+# Graph the data:
+ggplot(dat, aes(x=Year_Treatment, y=abdomen_width_standard)) + geom_quasirandom(alpha=0.5, width=0.1)
+
+# I'll now create models using linear mixed-effects models:
+model_abdomen_width_standard <- lmerTest::lmer(abdomen_width_standard ~ Treatment + Year + Treatment*Year +
+                                                  (1|Transect), data = dat)
+summary(model_abdomen_width_standard)
+
+# plot the model:
+plot_model(model_abdomen_width_standard, type = "pred", terms = c("Treatment", "Year"))
+
+# test assumptions:
+plot(model_abdomen_width_standard)
+qqnorm(residuals(model_abdomen_width_standard))
+qqline(residuals(model_abdomen_width_standard))
+
+# run the ANOVA test:
+anova(model_abdomen_width_standard, type=3)
+
+# rear_trochanter_length_standard ##########################################################################
+
+# Graph the data:
+ggplot(dat, aes(x=Year_Treatment, y=rear_trochanter_length_standard)) + geom_quasirandom(alpha=0.5, width=0.1)
+
+# I'll now create models using linear mixed-effects models:
+model_rear_trochanter_length_standard <- lmerTest::lmer(rear_trochanter_length_standard ~ Treatment + Year + Treatment*Year +
+                                                 (1|Transect), data = dat)
+summary(model_rear_trochanter_length_standard)
+
+# plot the model:
+plot_model(model_rear_trochanter_length_standard, type = "pred", terms = c("Treatment", "Year"))
+
+# test assumptions:
+plot(model_rear_trochanter_length_standard)
+qqnorm(residuals(model_rear_trochanter_length_standard))
+qqline(residuals(model_rear_trochanter_length_standard))
+
+# run the ANOVA test:
+anova(model_rear_trochanter_length_standard, type=3)
+
+# pairwise comparisons:
+emmeans(model_rear_trochanter_length_standard, pairwise~Treatment)
+
+# Water_affinity ##########################################################################
+
+# Graph the data:
+ggplot(dat, aes(x=Year_Treatment, y=Water_affinity)) + geom_quasirandom(alpha=0.5, width=0.1)
+
+# I'll now create models using linear model (LMM was singular fit):
+model_Water_affinity <- lm(Water_affinity ~ Treatment + Year + Treatment*Year, data = dat)
+summary(model_Water_affinity)
+
+# plot the model:
+plot_model(model_Water_affinity, type = "pred", terms = c("Treatment", "Year"))
+
+# test assumptions:
+#plot(model_Water_affinity)
+qqnorm(residuals(model_Water_affinity))
+qqline(residuals(model_Water_affinity))
+
+# run the ANOVA test:
+anova(model_Water_affinity)
+
+# Flight_capability ##########################################################################
+
+# Graph the data:
+ggplot(dat, aes(x=Year_Treatment, y=Flight_capability)) + geom_quasirandom(alpha=0.5, width=0.1)
+
+# take the log(x+0.1) transform:
+dat$log_Flight_capability <- log(dat$Flight_capability + 0.1)
+
+ggplot(dat, aes(x=Year_Treatment, y=log_Flight_capability)) + geom_quasirandom(alpha=0.5, width=0.1)
+
+# I'll now run the LMM model:
+model_Flight_capability <- lmerTest::lmer(log_Flight_capability ~ Treatment + Year + 
+                                            Treatment*Year + (1|Transect), data = dat)
+summary(model_Flight_capability)
+
+# plot the model:
+plot_model(model_Flight_capability, type = "pred", terms = c("Treatment", "Year"))
+
+# test assumptions:
+plot(model_Flight_capability)
+qqnorm(residuals(model_Flight_capability))
+qqline(residuals(model_Flight_capability))
+
+# run the ANOVA test:
+anova(model_Flight_capability, type = 3)
+
+# Now test for pairwise differences within each year:
+emmeans(model_Flight_capability, pairwise ~ Treatment | Year)
+
+# Environmental variables: soil moisture #######################################
+
+# Soil moisture must be analyzed separately for each year because a different
+# sensor was used
+
+# Import the environmental data:
+env <- read.csv("Aaron_PNR_formatted_data/PNR2015_2022_environment_by_plot.csv")
+
+# Change the following columns to factors:
+env$Transect <- as.factor(env$Transect)
+env$Treatment <- as.factor(env$Treatment)
+env$Year <- as.factor(env$Year)
+
+# Create a column for the Year Treatment concatenated variable
+env$Year_Treatment <- interaction(env$Year, env$Treatment)
+
+# Graph the data (2015):
+ggplot(env %>% filter(Year==2015), aes(x=Treatment, y=mean_moisture)) + 
+  geom_quasirandom(alpha=0.5, width=0.1)
+
+# Graph the data (2022):
+ggplot(env %>% filter(Year==2022), aes(x=Treatment, y=mean_moisture)) + 
+  geom_quasirandom(alpha=0.5, width=0.1)
+
+# Model (2015):
+model_2015_soil_moisture <- 
+  lmerTest::lmer(mean_moisture ~ Treatment + (1|Transect), data = env %>% 
+                   filter(Year==2015))
+summary(model_2015_soil_moisture)
+
+# Plot the model (2015):
+plot_model(model_2015_soil_moisture, type="pred", terms=c("Treatment"))
+
+# Anova test (2015)
+anova(model_2015_soil_moisture)
+
+# Model (2022):
+model_2022_soil_moisture <- 
+  lmerTest::lmer(mean_moisture ~ Treatment + (1|Transect), data = env %>% 
+                   filter(Year==2022))
+summary(model_2022_soil_moisture)
+
+# Plot the model (2022):
+plot_model(model_2022_soil_moisture, type="pred", terms=c("Treatment"))
+
+# Anova test (2022)
+anova(model_2022_soil_moisture)
+
+# Vegetation percentage cover ##################################################
+
+# Graph the data:
+ggplot(data=env, aes(x=Year_Treatment, y=VegAvg)) + 
+  geom_quasirandom(alpha=0.5, width=0.1) + ylab("Mean % cover of vegetation (%)")
+
+# Run the linear mixed-effects model:
+model_VegAvg <- lmerTest::lmer(VegAvg ~ Treatment + Year + Treatment*Year +
+                                 (1|Transect), data=env)
+summary(model_VegAvg)
+
+# Plot the model:
+plot_model(model_VegAvg, type="pred", terms=c("Treatment", "Year"))
+
+# Check assumptions:
+plot(model_VegAvg)
+qqnorm(residuals(model_VegAvg))
+qqline(residuals(model_VegAvg))
+hist(residuals(model_VegAvg), breaks=15) # Residuals have a long
+# tail on the right side, but a short tail on the left side.
+
+# Run the ANOVA test (type 3):
+anova(model_VegAvg, type=3)
+
+# Do pairwise comparisons by looking for simple effects (because 
+# the Treatment*Year interaction was significant)
+emmeans(model_VegAvg, pairwise ~ Treatment | Year)
+emmeans(model_VegAvg, pairwise ~ Year | Treatment)
+
+# leaf litter percentage cover ##################################################
+
+# Graph the data:
+ggplot(data=env, aes(x=Year_Treatment, y=LitterAvg)) + 
+  geom_quasirandom(alpha=0.5, width=0.1) + ylab("Mean % cover of leaf litter (%)")
+
+# Run the linear mixed-effects model:
+model_LitterAvg <- lmerTest::lmer(LitterAvg ~ Treatment + Year + Treatment*Year +
+                                 (1|Transect), data=env)
+summary(model_LitterAvg)
+
+# Plot the model:
+plot_model(model_LitterAvg, type="pred", terms=c("Treatment", "Year"))
+
+# Check assumptions:
+plot(model_LitterAvg)
+qqnorm(residuals(model_LitterAvg))
+qqline(residuals(model_LitterAvg))
+hist(residuals(model_LitterAvg), breaks=15) # Residuals have a long
+# tail on the right side, but a short tail on the left side.
+
+# Run the ANOVA test (type 3):
+anova(model_LitterAvg, type=3)
+
+# Do pairwise comparisons by looking for simple effects (because 
+# the Treatment*Year interaction was significant)
+emmeans(model_LitterAvg, pairwise ~ Treatment | Year)
+emmeans(model_LitterAvg, pairwise ~ Year | Treatment)
+
+# Canopy openness #############################################################
+
+# Graph the data:
+ggplot(data=env, aes(x=Year_Treatment, y=Densi.Total)) + 
+  geom_quasirandom(alpha=0.5, width=0.1) + ylab("Canopy openness (%)")# + geom_text(aes(label=Plot))
+
+# Take the logarithm to improve the homogeniety of variances assumption:
+env$log_Densi.Total = log(env$Densi.Total)
+
+# Graph again:
+ggplot(data=env, aes(x=Year_Treatment, y=log_Densi.Total)) + 
+  geom_quasirandom(alpha=0.5, width=0.1) + ylab("Canopy openness (%)")
+
+# Run the model (linear mixed effects):
+model_canopy_openness <- lmer(log_Densi.Total ~ Treatment + Year + 
+                                          Treatment*Year + (1|Transect), data=env)
+summary(model_canopy_openness)
+
+# Plot the model:
+plot_model(model_canopy_openness, type="pred", terms=c("Treatment", "Year"))
+
+# Test assumptions:
+plot(model_canopy_openness)
+qqnorm(residuals(model_canopy_openness))
+qqline(residuals(model_canopy_openness))
+
+# ANOVA test:
+anova(model_canopy_openness, type=3)
+
+# pairwise comparisons (simple effects because the interaction term was significant)
+emmeans(model_canopy_openness, pairwise ~ Treatment | Year)
+emmeans(model_canopy_openness, pairwise ~ Year | Treatment)
 
 # Pretty graphs ###############################################################
 
-abundance_graph_2015 <- ggplot(dat_2015, aes(x=Treatment, y=total_count_stdz)) + 
-  stat_summary(fun = mean, geom = "bar", fill = "lightgrey", color="black") +
-  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
-  geom_quasirandom(width=0.05, alpha=0.5) +
-  ylab("Ground beetles caught per day") + theme(plot.title = element_text(size=18),
+dat$Treatment <- factor(dat$Treatment, levels = c("Windthrow", "Salvaged", "Forest"))
+
+abundance_graph <- ggplot(dat, aes(x = Treatment, y = total_count_stdz, fill = Year, group = Year)) + 
+  stat_summary(fun = mean, geom = "bar", color="black", position = position_dodge(width = 0.9)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9)) +
+  ylab("Number of individuals / plot") + theme(plot.title = element_text(size=18),
                                                 axis.title.x = element_blank(),
                                                 axis.title.y = element_text(size = 16, 
                                                                             margin = margin(r=20)),
                                                 axis.text.x = element_text(size = 14),
-                                                axis.text.y = element_text(size = 14))+
-  ylim(c(0,2.5))+
-  ggtitle("Activity-abundance in 2015")
-abundance_graph_2015
+                                                axis.text.y = element_text(size = 14),
+                                               legend.title = element_text(size = 14),
+                                               legend.text = element_text(size = 14))+
+  scale_fill_grey()
+abundance_graph
 
-abundance_graph_2022 <- ggplot(dat_2022, aes(x=Treatment, y=total_count_stdz)) + 
-  stat_summary(fun = mean, geom = "bar", fill = "lightgrey", color="black") +
-  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
-  geom_quasirandom(width=0.05, alpha=0.5) +
-  ylab("Ground beetles caught per day") + theme(plot.title = element_text(size=18),
-                                                axis.title.x = element_blank(),
-                                                axis.title.y = element_text(size = 16, 
-                                                                            margin = margin(r=20)),
-                                                axis.text.x = element_text(size = 14),
-                                                axis.text.y = element_text(size = 14))+
-  ylim(c(0,2.5))+
-  ggtitle("Activity-abundance in 2022")
-abundance_graph_2022
-
-richness_graph_2015 <- ggplot(dat_2015, aes(x=Treatment, y=species_richness)) + 
-  stat_summary(fun = mean, geom = "bar", fill = "lightgrey", color="black") +
-  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
-  geom_quasirandom(width=0.1, alpha=0.5) +
-  ylab("Number of species") + theme(plot.title = element_text(size=18),
+richness_graph <- ggplot(dat, aes(x=Treatment, y=sp_rich, fill=Year, group=Year)) + 
+  stat_summary(fun = mean, geom = "bar", color="black", position=position_dodge(width=0.9)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position=position_dodge(width=0.9)) +
+  ylab("Number of species / plot") + theme(plot.title = element_text(size=18),
                                     axis.title.x = element_blank(),
                                     axis.title.y = element_text(size = 16, 
                                                                 margin = margin(r=15)),
                                     axis.text.x = element_text(size = 14),
-                                    axis.text.y = element_text(size = 14))+
-  ylim(0,20)+
-  ggtitle("Species richness in 2015")
-richness_graph_2015
+                                    axis.text.y = element_text(size = 14),
+                                    legend.title = element_text(size = 14),
+                                    legend.text = element_text(size = 14))+
+  scale_fill_grey()
+richness_graph
 
-richness_graph_2022 <- ggplot(dat_2022, aes(x=Treatment, y=species_richness)) + 
-  stat_summary(fun = mean, geom = "bar", fill = "lightgrey", color="black") +
-  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
-  geom_quasirandom(width=0.1, alpha=0.5) +
-  ylab("Number of species") + theme(plot.title = element_text(size=18),
-                                    axis.title.x = element_blank(),
-                                    axis.title.y = element_text(size = 16, 
-                                                                margin = margin(r=15)),
-                                    axis.text.x = element_text(size = 14),
-                                    axis.text.y = element_text(size = 14))+
-  ylim(0,20)+
-  ggtitle("Species richness in 2022")
-richness_graph_2022
+empty_graph <- ggplot() + theme_void()
 
-ggarrange(abundance_graph_2015, abundance_graph_2022,
-          richness_graph_2015, richness_graph_2022,
-          labels = c("A","B","C","D"), ncol=2, nrow=2)
+ggarrange(abundance_graph, empty_graph, richness_graph,
+          labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1, 0.1, 1), legend = "right")
 
+# legend.position = "none"
 
-# Make summary data tables for treatment means:
+# Make summary data tables for treatment means: ################################
 
 response_vars <- c("total_count_stdz", "open_habitat_spp_stdz", 
                    "eurytopic_spp_stdz", "forest_specialist_spp_stdz",
-                   "species_richness", "shannon_diversity", "mean_pairwise_distance",
-                   "PC1", "PC2", "PC3", "pronotum_width_standard", "rear_leg_length_standard",
-                   "rear_trochanter_length_standard", "eye_length_standard",
-                   "body_length", "antenna_rear_leg_ratio", "Water_affinity",
-                   "Flight_capability", "antenna_length_standard")
+                   "sp_rich", "shannon_diversity", "mean_pairwise_distance",
+                   "PC1", "PC2", "PC3", "body_length","antenna_length_standard",
+                   "rear_leg_length_standard", "antenna_rear_leg_ratio",
+                   "eye_length_standard", "eye_protrusion_standard",
+                   "eye_protrusion_ratio", "pronotum_width_standard", 
+                   "abdomen_width_standard", "rear_trochanter_length_standard", 
+                   "Water_affinity", "Flight_capability")
 
-dat_2015_by_treatment <- dat_2015 %>% group_by(Treatment) %>%
-  summarize(across(all_of(response_vars), mean))
+mean_concat_std_error <- function(x) {
+  return(paste(round(mean(x), 3), "+-", round(std.error(x), 3)))
+}
 
-#write.csv(dat_2015_by_treatment, "Aaron_PNR_formatted_data/PNR2015_response_vars_by_treatment.csv", row.names = F)
+dat_by_treatment <- dat %>% group_by(Year, Treatment) %>%
+  summarize(across(all_of(response_vars), ~ mean_concat_std_error(.)))
 
-dat_2022_by_treatment <- dat_2022 %>% group_by(Treatment) %>%
-  summarize(across(all_of(response_vars), mean))
+#write.csv(dat_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_response_vars_by_treatment.csv", row.names = F)
 
-#write.csv(dat_2022_by_treatment, "Aaron_PNR_formatted_data/PNR2022_response_vars_by_treatment.csv", row.names = F)
+env_vars <- c("mean_moisture", "VegAvg", "LitterAvg", "Densi.Total")
 
+env_by_treatment <- env %>% group_by(Year, Treatment) %>%
+  summarize(across(all_of(env_vars), ~ mean_concat_std_error(.)))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#write.csv(env_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_environmental_vars_by_treatment.csv", row.names = F)
 
 

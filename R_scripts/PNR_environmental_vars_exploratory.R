@@ -8,6 +8,7 @@ theme_set(theme_classic())
 library(dplyr)
 library(lubridate)
 library(corrplot) # for correlation matrices
+library(ggbeeswarm) # for geom_quasirandom()
 
 # Soil moisture 2022 ################################################################
 
@@ -43,8 +44,8 @@ y_values <- dnorm(x_values, overall_mean, sqrt(overall_var))
 histogram <- hist(soil_moisture_2022$percent_Moisture_Avg, plot=FALSE, breaks=20)
 plot(histogram)
 lines(x=x_values, y=1000*y_values)
-
 # I think a normal distribution fits the data fairly well (subjectively).
+
 ggplot(data=soil_moisture_2022, aes(x=Treatment, y=percent_Moisture_Avg)) +
          geom_jitter(height=0, width=0.1, alpha=0.5)
 # However, the above graph suggests that the within-group variance of 
@@ -59,12 +60,13 @@ soil_moisture_2022_by_treatment <- soil_moisture_2022 %>% group_by(Treatment) %>
 soil_moisture_2022_by_treatment
 
 # Does this pattern still hold after taking the mean soil moisture for each plot 
-# over the whole season?
-soil_moisture_2022_by_plot <- soil_moisture_2022 %>% group_by(Plot) %>% 
+# over the whole season? (IMPORTANT: RESTRICT THE DATA TO JUNE-AUGUST: omit September)
+soil_moisture_2022_by_plot <- soil_moisture_2022 %>% 
+  filter(month(SoilMoisture_day) != 9) %>% group_by(Plot) %>% 
   summarise(Treatment = first(Treatment),
             mean_moisture = mean(percent_Moisture_Avg),
             var_moisture = var(percent_Moisture_Avg),
-            n_moisture = n())
+            n_moisture_2022 = n())
 ggplot(data=soil_moisture_2022_by_plot, aes(x=Treatment, y=mean_moisture)) +
   geom_jitter(height=0, width=0.1, alpha=0.5)
 # Yes, the pattern still holds that wind-disturbed sites seem more heterogeneous
@@ -121,9 +123,13 @@ hist(cover_2022$CWDAvg, breaks=10) # CWD seems rare overall
 hist(cover_2022$RockAvg, breaks=10) # Rock cover ranges from 0 to ~30%, with the 
 # majority of measurements in the 0-10% range
 
-# Average across sample date: 
-cover_2022_by_plot <- cover_2022 %>% group_by(Plot) %>%
-  summarize(Treatment = first(Treatment),
+# Average across sample date. I'd like to only include data from June and July,
+# and exclude August and September, because we only have June and July data from 
+# 2015
+cover_2022_by_plot <- cover_2022 %>% filter(day_of_year < 200) %>%
+  group_by(Plot) %>%
+  summarize(n_dates_cover_2022 = n(),
+            Treatment = first(Treatment),
             VegAvg = mean(VegAvg),
             LitterAvg = mean(LitterAvg),
             BareGAvg = mean(BareGAvg),
@@ -141,6 +147,7 @@ ggplot(data=cover_2022_by_plot, aes(x=Treatment, y=VegAvg)) +
 # How does litter cover vary by treatment?
 ggplot(data=cover_2022_by_plot, aes(x=Treatment, y=LitterAvg)) +
   geom_point(alpha=0.5) 
+# Salvaged plots seem to have a bit lower litter than forest
 
 # How does bare ground cover vary by treatment?
 ggplot(data=cover_2022_by_plot, aes(x=Treatment, y=BareGAvg)) +
@@ -171,8 +178,7 @@ ggplot(data=cover_2022, aes(x=day_of_year, y=VegHtAvg)) +
   geom_point(alpha=0.5)
 veg_height_change_2022 <- lm(VegHtAvg ~ Date_yyyy.mm.dd, data=cover_2022)
 summary(veg_height_change_2022)
-# Vegetation height appears to slightly decrease over time, with
-# lowest height in September
+# Vegetation height appears to slightly decrease over the course of the season.
 
 # How does vegetation height vary by treatment?
 ggplot(data=cover_2022_by_plot, aes(x=Treatment, y=VegHtAvg)) +
@@ -202,13 +208,12 @@ ggplot(data=densi_2022_by_plot, aes(x=Treatment, y=Densi.Total)) +
 
 # Combine 2022 environmental data into a single data table ####################
 
-env_2022_by_plot_0 <- full_join(soil_moisture_2022_by_plot, 
-                                densi_2022_by_plot %>% select(-Treatment), 
-                                by="Plot")
-
-env_2022_by_plot <- full_join(env_2022_by_plot_0, 
-                              cover_2022_by_plot %>% select(-Treatment),
-                              by="Plot")
+env_2022_by_plot <- 
+  full_join(trap_locations, soil_moisture_2022_by_plot %>% select(-Treatment),
+                                by="Plot") %>%
+  full_join(densi_2022_by_plot %>% select(-Treatment, -PNR_Code), by="Plot") %>% 
+  full_join(cover_2022_by_plot %>% select(-Treatment), by="Plot") %>%
+  filter(Plot != 65) # remove the row for plot 65
 
 # Soil moisture and temperature 2015 ##########################################
 
@@ -224,6 +229,10 @@ soil_moisture_temp_2015_0$Day <-
 soil_moisture_temp_2015 <- soil_moisture_temp_2015_0 %>% 
   filter(Plot >= 41 & Plot <= 65)
 # Looks like soil moisture was taken at 6 time points
+
+summary(soil_moisture_temp_2015$SoilMoist1)
+summary(soil_moisture_temp_2015$SoilMoist2)
+summary(soil_moisture_temp_2015$SoilMoist3)
 
 soil_moisture_temp_2015$SoilMoist1 <- as.numeric(soil_moisture_temp_2015$SoilMoist1)
 # SoilMoist1 has some amount of missing data esp. towards end of summer
@@ -241,19 +250,20 @@ soil_moisture_temp_2015$SoilTempAvrg <- rowMeans(data.frame(
   soil_moisture_temp_2015$SoilTemp3), na.rm=T)
 
 # How did soil moisture change over the season in 2015?
-ggplot(data=soil_moisture_temp_2015, aes(x=Day, 
-                                    y=SoilMoistAvrg)) +
-  geom_point(alpha=0.5) + theme_classic()
+ggplot(data=soil_moisture_temp_2015, aes(x=Day, y=SoilMoistAvrg, color=Treatment)) +
+  geom_quasirandom(alpha=0.5, width=0.1) + theme_classic()
 # Looks like the soil moisture strongly decreased over the season in 2015.
 # This is likely connected to a lack of precipitation in the late summer in
 # 2015.
 # Note: the spacing between measurement dates is not to scale
 
 # How did soil temp change over the season in 2015?
-ggplot(data=soil_moisture_temp_2015, aes(x=Day, 
-                                         y=SoilTempAvrg)) +
-  geom_point(alpha=0.5) + theme_classic()
-# The soil temp was higher in August in 2015
+ggplot(data=soil_moisture_temp_2015, aes(x=Day, y=SoilTempAvrg, color=Treatment)) +
+  geom_quasirandom(alpha=0.5, width=0.1) + theme_classic()
+# The soil temp was higher in August in 2015, and also in early June it was
+# fairly high. But in late June and July it was lower. Most of the windthrow
+# and salvaged plots heated up more than forest controls during the times when 
+# soil moisture increased
 
 # Summarize by plot:
 soil_moisture_temp_2015_by_plot_0 <- soil_moisture_temp_2015 %>% group_by(Plot) %>% 
@@ -262,7 +272,8 @@ soil_moisture_temp_2015_by_plot_0 <- soil_moisture_temp_2015 %>% group_by(Plot) 
             var_moisture = var(SoilMoistAvrg),
             mean_temp = mean(SoilTempAvrg),
             var_temp = var(SoilTempAvrg),
-            n_dates_measured = n()) %>% select(-Treatment)
+            n_measurements_soil_moist_2015 = n()) %>% 
+  select(-Treatment)
 
 #
 soil_moisture_temp_2015_by_plot <- 
@@ -331,15 +342,15 @@ hist(cover_2022$RockAvg, breaks=10) # Rock cover ranges from 0 to ~30%, with the
 
 # Average across sample date: 
 cover_2015_by_plot <- cover_2015 %>% group_by(Plot) %>%
-  summarize(Treatment = first(Treatment),
+  summarize(n_dates_cover_2015 = n(),
+            Treatment = first(Treatment),
             VegAvg = mean(VegAvg),
             LitterAvg = mean(LitterAvg),
             BareGAvg = mean(BareGAvg),
             FWDAvg = mean(FWDAvg),
             CWDAvg = mean(CWDAvg),
             RockAvg = mean(RockAvg),
-            VegHtAvg = mean(VegHtAvg),
-            canopy_openness = mean(Densi.Total))
+            VegHtAvg = mean(VegHtAvg))
 
 # How does vegetation cover vary by treatment in 2015?
 ggplot(data=cover_2015_by_plot, aes(x=Treatment, y=VegAvg)) +
@@ -389,9 +400,14 @@ ggplot(data=cover_2015, aes(x=Densi_Date, y=Densi.Total, group=Plot)) +
   geom_point(alpha=0.5) + geom_line(alpha=0.5) # The values seem relatively consistent
 # between months
 
+# I'm just gonna use the data from June, because the 2022 canopy openness
+# was only measured in June
+canopy_openness_2015 <- cover_2015 %>% filter(Densi_Date == "June") %>%
+  select(Plot, Treatment, Densi.Total)
+
 # How did canopy openness vary by treatment in 2015?
-ggplot(data=cover_2015_by_plot, aes(x=Treatment, y=canopy_openness)) +
-  geom_jitter(alpha=0.5, width=0.05, height=0) 
+ggplot(data=canopy_openness_2015, aes(x=Treatment, y=Densi.Total)) +
+  geom_jitter(alpha=0.5, width=0.05, height=0)# + geom_text(aes(label=Plot))
 # Five of six salvaged plots have extremely high canopy openness. One of six
 # windthrow plots also has extremely high canopy openness. The rest of the 
 # windthrow plots seem to have canopy openness values slightly higher than 
@@ -408,20 +424,20 @@ ggplot(data=cover_2015_by_plot, aes(x=Treatment, y=canopy_openness)) +
 # Join the moisture and temp data to the other data
 cover_2015_by_plot_1 <- cover_2015_by_plot %>% select(-Treatment)
 env_2015_by_plot <- full_join(soil_moisture_temp_2015_by_plot, cover_2015_by_plot_1, 
-                              by="Plot")
+                              by="Plot") %>% 
+  full_join(canopy_openness_2015 %>% select(-Treatment), by="Plot")
 
 # 2015 dimension reduction #####################################################
 
 # An initial list of variables to possibly analyze:
-vars_list_2015_init <- c("canopy_openness", "mean_moisture", "VegHtAvg", "VegAvg", 
+vars_list_2015_init <- c("Densi.Total", "mean_moisture", "VegHtAvg", "VegAvg", 
                "LitterAvg", "BareGAvg", "FWDAvg", "CWDAvg", "RockAvg")
 
 # Examine correlation matrix
 cor_matrix_2015_init <- cor(env_2015_by_plot[, vars_list_2015_init])
 corrplot::corrplot(cor_matrix_2015_init, method="number")
 
-# Remove leaf litter and vegetation:
-vars_list_2015 <- c("canopy_openness", "mean_moisture", "VegHtAvg", "VegAvg", 
+vars_list_2015 <- c("Densi.Total", "mean_moisture", "VegHtAvg", "VegAvg", 
                     "LitterAvg", "BareGAvg", "FWDAvg", "CWDAvg", "RockAvg")
 cor_matrix_2015 <- cor(env_2015_by_plot[, vars_list_2015])
 corrplot::corrplot(cor_matrix_2015, method="number")
@@ -442,6 +458,34 @@ ggplot(data=env_2015_by_plot_1) + geom_point(aes(x=PC1, y=PC2, color=Treatment),
 
 # The data seem to suggest that soil moisture varies independently from the 
 # forest management treatment.
+
+# Combining the 2015 and 2022 datasets for further statistical tests ###########
+
+colnames(env_2015_by_plot)
+colnames(env_2022_by_plot)
+env_2015_by_plot$Plot
+env_2022_by_plot$Plot
+# I need to rename plot 65 of 2015 to plot 63. This is due to the plot being moved 
+# slightly (about 27 meters) between 2015 and 2022.
+env_2015_by_plot[env_2015_by_plot$Plot==65, "Plot"] <- 63
+
+# Add a column for Year:
+env_2015_by_plot$Year <- 2015
+env_2022_by_plot$Year <- 2022
+
+# Merge the dataframes together:
+env <- bind_rows(env_2015_by_plot, env_2022_by_plot) %>% arrange(Year, Plot)
+
+# Export the data table: ######################################################
+
+#write.csv(env, "Aaron_PNR_formatted_data/PNR2015_2022_environment_by_plot.csv", 
+#          row.names = F)
+
+
+
+
+
+
 
 
 
