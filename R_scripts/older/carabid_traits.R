@@ -347,7 +347,7 @@ traits_by_spp_modified_without_N_1 <-
   bind_cols(traits_by_spp_modified_without_N, data.frame(pc_without_Notiophilus$x))
 
 # What is the correlation between PC1, PC2, PC3, Water_affinity, and Flight_capability?
-cor_matrix2 <- cor(na.omit(traits_by_spp_modified_without_N_1[, c(12:16)]), method="pearson")
+cor_matrix2 <- cor(na.omit(traits_by_spp_modified_without_N_1[, c(13:17)]), method="pearson")
 corrplot::corrplot(cor_matrix2, method="number")
 # PC2 is somewhat correlated with Flight capability, because smaller species
 # with proportionally bigger eyes are likely to be flight capable.
@@ -387,11 +387,27 @@ factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,3), repel=T,
             aes(x=PC1, y=PC3, label=spp_abbrev),
             size=3) + scale_x_continuous(limits = c(-4,4), breaks = c(-4,-3,-2,-1,0,1,2,3,4))
 
+# Now for PC1 vs PC4:
+factoextra::fviz_pca_biplot(pc_without_Notiophilus, axes=c(1,4), repel=T, 
+                            geom.ind = "none", 
+                            geom.var = c("arrow", "text"),
+                            title="") + 
+  coord_fixed() + theme_classic() + 
+  scale_y_continuous(breaks=c(-3,-2,-1,0,1,2,3)) +
+  theme(plot.title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)) +
+  xlab("PC1 (31%)") + ylab("PC4 (11%)") +
+  geom_text(data=traits_by_spp_modified_without_N_1 %>% 
+              filter(Species %in% species_2015_2022_1st_6), 
+            aes(x=PC1, y=PC4, label=spp_abbrev),
+            size=3) + scale_x_continuous(limits = c(-4,4), breaks = c(-4,-3,-2,-1,0,1,2,3,4))
+
 # Now I'd like to project Notiophilus onto the PC axes I found, so I can still
 # include the species:
 Notiophilus_traits_0 <- 
   traits_by_spp_modified[traits_by_spp_modified$Species == "Notiophilus_aeneus", 
-                         c("Species", "Genus", trait_list_modified)]
+                         c("Species", "Genus", "spp_abbrev", trait_list_modified)]
 
 # center and scale:
 Notiophilus_traits <- Notiophilus_traits_0
@@ -439,9 +455,9 @@ combined_0 <- rbind(Notiophilus_traits_1, traits_by_spp_modified_without_N_1)
 combined <- combined_0 %>% arrange(Species)
 
 # Graph it for a reality check:
-ggplot(data=combined, aes(x=PC1, y=PC2, label=Species)) + geom_point() + 
+ggplot(data=combined, aes(x=PC1, y=PC2, label=spp_abbrev)) + 
   geom_text(alpha=0.5) + coord_fixed()
-ggplot(data=combined, aes(x=PC1, y=PC3, label=Species)) + geom_point() + 
+ggplot(data=combined, aes(x=PC1, y=PC3, label=spp_abbrev)) + 
   geom_text(alpha=0.5)+ coord_fixed()
  # Looks good
 
@@ -486,10 +502,12 @@ heatmap(as.matrix(gower_dist))
 # I'm confused whether this is a symmetric matrix. It appears to be.
 
 # What is the mean distance?
-mean(gower_dist) # 0.29
+mean(gower_dist) # 0.30
 
+# the min?
+min(gower_dist) # 0.02
 # the max?
-max(gower_dist) # 0.69
+max(gower_dist) # 0.70
 
 # Export the distance matrix: #################################################
 # Label the column names for each species:
@@ -521,6 +539,9 @@ eye_flatness_ranking <-
 # much biological meaning. For one, the "eye protrusion" sometimes just
 # measures if the beetle's eyes are on the side of its head vs. on the top
 
+# No, I still think it has some biological meaning in terms of the flatness
+# of the eyes. It's just not perfect.
+
 # Investigate antenna:rear leg ratio of various species: ######################
 
 antenna_to_rear_leg_ranking <- 
@@ -529,10 +550,20 @@ antenna_to_rear_leg_ranking <-
 
 hist(antenna_to_rear_leg_ranking$antenna_rear_leg_ratio)
 
+# Investigate antenna length various species: ######################
+
+antenna_ranking <- 
+  combined %>% select(Species, antenna_length_standard) %>%
+  arrange(antenna_length_standard)
+
+hist(antenna_ranking$antenna_length_standard)
+
 # Further investigate trait relationships: #####################################
 
 ggplot(data=combined, aes(x=antenna_length_standard, y=rear_trochanter_length_standard,
        label=Species)) + 
   geom_point(alpha=0.5) + geom_text()
 
+ggplot(data=combined %>% filter(spp_abbrev != "No.ae"), aes(x=antenna_length_standard, y=eye_length_standard)) + 
+  geom_point(alpha=0.5)
 

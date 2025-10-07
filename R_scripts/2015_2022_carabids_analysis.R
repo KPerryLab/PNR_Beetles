@@ -72,21 +72,14 @@ plot(specaccum(comm=carab_by_interval_2015[,carab_species], method="collector"),
 plot(specaccum(comm=carab_by_interval_2022[,carab_species], method="collector"),
      xlab="Interval") + title("2022 accumulation of species over the season") 
 
-# Additional species were caught in 2022 in September:
+# Additional species were caught in 2022 in September, and not any other interval
+# in 2015 or 2022:
 September_only_species <- 
   names(which((colSums(carab_by_interval_2022[7:8,carab_species]) > 0) & 
+                (colSums(carab_by_interval_2015[1:6,carab_species]) == 0) &
                 (colSums(carab_by_interval_2022[1:6,carab_species]) == 0)))
 
-#View(carab_by_interval_2022[, September_only_species])
-#View(carab_by_interval_2015[, September_only_species])
-# Of the nine species found only after Aug 11 in the 2022 sampling, most (8/9) 
-# were not found at all in 2015. These include "Amerizus_unknown","Myas_coracinus",
-# "Patrobus_longicornis"  ,"Platynus_hypolithos","Pterostichus_atratus", "Scaphinotus_andrewsii"  
-# "Scaphinotus_ridingsii" and "Synuchus_impunctatus"
-
-last_2_intervals_2015 <- 
-  names(which((colSums(carab_by_interval_2015[5:6,carab_species]) > 0) & 
-                (colSums(carab_by_interval_2015[1:4,carab_species]) == 0)))
+carab_species_1st_6 <- setdiff(carab_species, September_only_species)
 
 # Make a graph of the captures of Platynus angustatus over the season:
 ggplot(data=carab_by_interval_2015, aes(x=Collection_date, y=Platynus_angustatus)) +
@@ -97,39 +90,10 @@ ggplot(data=carab_by_interval_2022, aes(x=Collection_date, y=Platynus_angustatus
   xlab("Collection date")+
   ggtitle(expression(paste("Captures of  ", italic("Platynus angustatus"), " over the 2022 season")))
 
+# Pterostichus tristis:
 ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Pterostichus_tristis)) +
   geom_line()+ geom_point()
 ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Pterostichus_tristis)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Pterostichus_adoxus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Pterostichus_adoxus)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Cyclotrachelus_sigillatus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Cyclotrachelus_sigillatus)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Pterostichus_moestus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Pterostichus_moestus)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Dicaelus_politus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Dicaelus_politus)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Chlaenius_emarginatus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Chlaenius_emarginatus)) +
-  geom_line()+ geom_point()
-
-ggplot(data=carab_by_interval_2015, aes(x=Set_date, y=Sphaeroderus_stenostomus)) +
-  geom_line()+ geom_point()
-ggplot(data=carab_by_interval_2022, aes(x=Set_date, y=Sphaeroderus_stenostomus)) +
   geom_line()+ geom_point()
 
 # Investigate carabid abundance over the season ################################
@@ -149,9 +113,6 @@ ggplot(data=carab_by_interval_2015, aes(x=Interval, y=total_count_stdz)) +
   geom_line(color="red") + geom_point(color="red") + 
   geom_point(data=carab_by_interval_2022, aes(x=Interval, y=total_count_stdz), color="blue") +
   geom_line(data=carab_by_interval_2022, aes(x=Interval, y=total_count_stdz), color="blue") + ylim(0,12)
-
-
-
 
 # Data standardization - by plot ###############################################
 
@@ -178,23 +139,25 @@ g_0 <- carab_0 %>% filter(month(Collection_date) != 9) %>% group_by(Year, Plot) 
 # Now join the information about the plot locations:
 g <- right_join(plot_locations, g_0, by="Plot") %>% arrange(Year)
 
+# Now remove any columns for species that were only collected in September:
+g <- g %>% select(-all_of(September_only_species))
+
 # Now divide the species counts by the approximate number of days active out 
 # of 84 days (to account for some trap contents being lost for a few plots)
 g_stdz <- g
-g_stdz[,carab_species] <- g[,carab_species] * 84 / g$approx_trap_days
+g_stdz[,carab_species_1st_6] <- g[,carab_species_1st_6] * 84 / g$approx_trap_days
 
 # Investigate total counts of ground beetles ##################################
 # How many ground beetles were collected?
 
-g$total_count <- rowSums(g[,carab_species])
+g$total_count <- rowSums(g[,carab_species_1st_6])
 sum(g %>% filter(Year==2015) %>% select(total_count)) # 934 ground beetles in 2015
 sum(g %>% filter(Year==2022) %>% select(total_count)) # 603 ground beetles in 
 # the first six intervals of 2022.
 
-g_stdz$total_count_stdz <- rowSums(g_stdz[,carab_species]) # totals for the standardized counts
+g_stdz$total_count_stdz <- rowSums(g_stdz[,carab_species_1st_6]) # totals for the standardized counts
 sum(g_stdz %>% filter(Year==2015) %>% select(total_count_stdz)) 
 sum(g_stdz %>% filter(Year==2022) %>% select(total_count_stdz)) 
-
 
 # Investigate number of species found #########################################
 
@@ -236,9 +199,9 @@ salvaged_2022 <- g %>% filter(Treatment == "Salvaged", Year==2022)
 windthrow_2022 <- g %>% filter(Treatment == "Windthrow", Year==2022)
 
 # Now create accumulation curves:
-forest_2015_accum <- specaccum(comm=forest_2015[carab_species], method="random", permutations=100)
-salvaged_2015_accum <- specaccum(comm=salvaged_2015[carab_species], method="random", permutations=100)
-windthrow_2015_accum <- specaccum(comm=windthrow_2015[carab_species], method="random", permutations=100)
+forest_2015_accum <- specaccum(comm=forest_2015[carab_species_1st_6], method="random", permutations=100)
+salvaged_2015_accum <- specaccum(comm=salvaged_2015[carab_species_1st_6], method="random", permutations=100)
+windthrow_2015_accum <- specaccum(comm=windthrow_2015[carab_species_1st_6], method="random", permutations=100)
 
 # Make a graph for 2015:
 par(mfrow=c(1,1))
@@ -258,9 +221,9 @@ title("2015 ground beetle species accumulation")
 
 # Now for 2022:
 
-forest_2022_accum <- specaccum(comm=forest_2022[carab_species], method="random", permutations=100)
-salvaged_2022_accum <- specaccum(comm=salvaged_2022[carab_species], method="random", permutations=100)
-windthrow_2022_accum <- specaccum(comm=windthrow_2022[carab_species], method="random", permutations=100)
+forest_2022_accum <- specaccum(comm=forest_2022[carab_species_1st_6], method="random", permutations=100)
+salvaged_2022_accum <- specaccum(comm=salvaged_2022[carab_species_1st_6], method="random", permutations=100)
+windthrow_2022_accum <- specaccum(comm=windthrow_2022[carab_species_1st_6], method="random", permutations=100)
 
 # Make a graph for 2022:
 par(mfrow=c(1,1))
@@ -282,8 +245,8 @@ title("2022 ground beetle species accumulation")
 # Taxonomic alpha-diversity: Chao estimators ###################################
 # still omitting the last two intervals of the 2022 data
 
-total_counts_2015 <- colSums(g %>% filter(Year==2015) %>% select(all_of(carab_species)))
-total_counts_2022 <- colSums(g %>% filter(Year==2022) %>% select(all_of(carab_species)))
+total_counts_2015 <- colSums(g %>% filter(Year==2015) %>% select(all_of(carab_species_1st_6)))
+total_counts_2022 <- colSums(g %>% filter(Year==2022) %>% select(all_of(carab_species_1st_6)))
 
 # Total counts 2015:
 ChaoSpecies(total_counts_2015, datatype = "abundance", k = 10, conf=0.95)
@@ -298,7 +261,7 @@ ChaoSpecies(total_counts_2022, datatype = "abundance", k = 10, conf=0.95)
 
 # Taxonomic alpha-diversity: plot level species richness and Shannon diversity ####
 
-g_stdz$sp_rich <- rowSums(g_stdz[,carab_species] > 0)
+g_stdz$sp_rich <- rowSums(g_stdz[,carab_species_1st_6] > 0)
 
 # Plot species richness as a function of treatment:
 ggplot(data=g_stdz %>% filter(Year==2015), aes(x=Treatment, y=sp_rich)) +
@@ -319,7 +282,7 @@ ggplot(data=g_stdz %>% filter(Year==2022), aes(x=Treatment, y=sp_rich)) +
 
 # Shannon diversity: exp(-Σp_i*log(p_i))
 g_stdz$shannon_diversity <- 
-  hill_taxa(g_stdz[,carab_species], q = 1, MARGIN = 1)
+  hill_taxa(g_stdz[,carab_species_1st_6], q = 1, MARGIN = 1)
 
 # Plot Shannon diversity as a function of treatment:
 ggplot(data=g_stdz %>% filter(Year==2015), aes(x=Treatment, y=shannon_diversity)) +
@@ -342,16 +305,16 @@ ggplot(data=g_stdz %>% filter(Year==2022), aes(x=Treatment, y=shannon_diversity)
 # Important note: as the species richness increases, the mean pairwise distance
 # tends to become less variable (source: Swenson)
 
-dist_0 <- read.csv("Aaron_PNR_formatted_data/carabid_dist_in_trait_space.csv")
+dist_0 <- read.csv("Aaron_PNR_formatted_data/carabid_dist_in_trait_space.csv") # Gower distances
 
 # Check if the species column names match between the distance matrix and the
 # species abundance data:
-all.equal(colnames(dist_0), carab_species) # True
+all.equal(colnames(dist_0), carab_species_1st_6) # True
 
 dist <- as.matrix(dist_0)
 rownames(dist) <- colnames(dist)
 
-g_stdz_matrix <- as.matrix(g_stdz[,carab_species])
+g_stdz_matrix <- as.matrix(g_stdz[,carab_species_1st_6])
 
 # Compute the weighted mean_pairwise_distance for each plot
 g_stdz$mean_pairwise_distance <-
@@ -381,15 +344,15 @@ ggplot(data=g_stdz %>% filter(Year==2022), aes(x=Treatment, y=mean_pairwise_dist
 # Taxonomic beta-diversity ###################################################
 
 # First, I need to convert my data table to relative abundance data:
-g_stdz_rel <- vegan::decostand(g_stdz[carab_species], method = "total")
+g_stdz_rel <- vegan::decostand(g_stdz[carab_species_1st_6], method = "total")
 
 # Now compute distance matrix between all 48 plots:
 dist_spp_space <- vegdist(g_stdz_rel, method = "bray")
 summary(as.vector(dist_spp_space))
 hist(as.vector(dist_spp_space))
 # A distance of 1 indicates complete dissimilarity.
-# I guess if there is no commonality in the captured species, then the dissimilarity
-# is 1.
+# I guess if there is no commonality in the captured species between two plots, 
+# then the dissimilarity is 1.
 
 # Now create nonmetric multidimensional scaling ordinations: # TRYING 3 dimensions:
 #nmds <- metaMDS(dist_spp_space, trymax = 500, k = 3)
@@ -425,16 +388,18 @@ ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Transect)) +
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors)
 
-taxonomic_NMDS <- ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year)) + 
+ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors) + coord_fixed() +
   theme(legend.position = "none")
 
-ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year, group=Plot)) + 
-  geom_point(size=2) + geom_line() + scale_color_manual(values = treatment_colors)
+taxonomic_NMDS <- ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year, group=Plot)) + 
+  geom_point(size=3) + geom_line(linewidth=1) + scale_color_manual(values = treatment_colors) +
+  coord_fixed() + scale_x_continuous(limits = c(-1.8,1.8)) + scale_y_continuous(limits = c(-1.8,1.8)) +
+  theme(axis.text = element_blank())
 
-# Now run the Permutational Multivariate Analysis of Variance. 
+# Now run the Permutational Multivariate Analysis of Variance (PERMANOVA):
 
-# Make species abundance matrix for only the windthrow and salvaged plots: #####
+# Make species abundance matrix for only the windthrow and salvaged plots: ####
 #g_stdz_ws <- g_stdz %>% filter(Treatment != "Forest") # ws stands for windthrow salvaged
 #g_stdz_rel_ws <- vegan::decostand(g_stdz_ws[carab_species], method = "total")
 
@@ -443,6 +408,15 @@ ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year, group=Plo
 
 adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
         permutations = 999, by="terms") # May need to change this to by="margin"
+
+# Because the p-value of the adonis2 function is changing each time I run
+# the line of code, I'll need to increase the number of permutations so that 
+# I get a more consistent p-value:
+#adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
+#        permutations = 99999, by="terms")
+
+# JUST TO TRY IT OUT: Also, try a PERMANOVA with area (northeast blowdown or southwest blowdown):
+# adonis2(dist_spp_space ~ Area, data=g_stdz, permutations = 999, by="terms")
 
 # Run the pairwise adonis test:
 pairwise.adonis(dist_spp_space, g_stdz$Treatment)
@@ -492,20 +466,21 @@ ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Area)) +
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors)
 
-functional_NMDS <- ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
+ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
                         shape=Year)) + coord_fixed() + theme(legend.background = element_rect(color = "black",
                                                                                               linewidth = 0.2),
                                                              legend.box.margin = margin(5, 5, 5, 20)) +
   geom_point(size=2) + scale_color_manual(values = treatment_colors)
 
-ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
+functional_NMDS <- ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
                         shape=Year, group=Plot)) + 
-  geom_point(size=2) + geom_line() + scale_color_manual(values = treatment_colors)
+  geom_point(size=3) + geom_line(linewidth=1) + scale_color_manual(values = treatment_colors) +
+  xlab("NMDS1") + ylab("NMDS2") + coord_fixed() +
+  scale_x_continuous(limits = c(-0.18,0.18)) + scale_y_continuous(limits = c(-0.18,0.18)) +
+  theme(axis.text = element_blank())
 
-empty_graph <- ggplot() + theme_void()
-
-ggarrange(taxonomic_NMDS, empty_graph, functional_NMDS,
-          labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(0.7, 0.1, 1))
+ggarrange(taxonomic_NMDS, functional_NMDS,
+          labels = c("A", "B"), ncol=1, nrow=2)
 
 # Now run a PERMANOVA to test the null hypothesis that the centroids of each 
 # treatment group are identical and their dispersions are identical:
@@ -517,7 +492,11 @@ ggarrange(taxonomic_NMDS, empty_graph, functional_NMDS,
 
 adonis2(dist_functional_beta ~ g_stdz$Treatment + g_stdz$Year +
           g_stdz$Treatment * g_stdz$Year,
-         permutations = 999, by="terms") # may need to change this to by="margin"
+         permutations = 999, by="terms") 
+
+#adonis2(dist_functional_beta ~ g_stdz$Treatment + g_stdz$Year +
+#          g_stdz$Treatment * g_stdz$Year,
+#        permutations = 99999, by="terms") 
 
 # Do a pairwise test to see if any of the treatment groups are different:
 pairwise.adonis(dist_functional_beta, g_stdz$Treatment)
@@ -576,17 +555,17 @@ rownames(traits) <- traits$Species
 
 # Of the 47 species caught in the first 6 collecion intervals, how many were 
 # open-habitat and eurytopic?
-table(traits %>% filter(Species %in% species_2015_2022_1st_6) %>% select(Forest_affinity))
+table(traits %>% select(Forest_affinity))
 
 # make lists of the eurytopic, open-habitat, and forest specialist species
 open_habitat_spp <- traits[!is.na(traits$Forest_affinity) &
   traits$Forest_affinity == "open habitat", "Species"] # 2 spp
 eurytopic_spp <- traits[!is.na(traits$Forest_affinity) &
-  traits$Forest_affinity == "eurytopic", "Species"] # 28 spp
+  traits$Forest_affinity == "eurytopic", "Species"] # 24 spp
 forest_specialist_spp <- traits[!is.na(traits$Forest_affinity) &
-  traits$Forest_affinity == "forest specialist", "Species"] # 23 spp
+  traits$Forest_affinity == "forest specialist", "Species"] # 20 spp
 unknown_forest_affinity_spp <- traits[is.na(traits$Forest_affinity), "Species"] 
-# (2 species have unknown forest affinity)
+# (1 species has unknown forest affinity)
 
 # Create a column for activity-abundance of open habitat species
 g_stdz$open_habitat_spp_stdz <- rowSums(g_stdz[, open_habitat_spp])
@@ -602,12 +581,12 @@ g_stdz$forest_specialist_spp_stdz <- rowSums(g_stdz[, forest_specialist_spp])
 # I want to calculate community-weighted mean trait values for each
 # plot
 CWM <- function(community, trait_name){
-  geometry::dot(c(t(community[carab_species] /
-                      sum(community[carab_species]))),
+  geometry::dot(c(t(community[carab_species_1st_6] /
+                      sum(community[carab_species_1st_6]))),
                 traits[,trait_name])
 }
 
-geometry::dot(c(t(g_stdz[1, carab_species] / 
+geometry::dot(c(t(g_stdz[1, carab_species_1st_6] / 
                     g_stdz$total_count_stdz[1])), 
               traits$PC1) # weighted mean is simply a dot product of a vector 
 # of the relative abundances of each species, with a vector of the trait value 
@@ -617,21 +596,17 @@ geometry::dot(c(t(g_stdz[1, carab_species] /
 CWM(community = g_stdz[1,], trait_name = "PC1")
 
 # I decided to use the function "functcomp" in the package FD to calculate 
-# CWMs. It looks like the results match what I got with my function. Here,
+# CWMs (more repeatable). # It looks like the results match what I got with my function. Here,
 # I'll calculate the CWM for each of the first three PC axes, as well
 # as the eight numerical traits and Water_affinity and Flight_capability
 # and standardized antenna length
-numeric_traits_modified <- c("body_length", "eye_length_standard",
-                             "eye_protrusion_ratio", "pronotum_width_standard",
-                             "abdomen_width_standard", "rear_leg_length_standard", 
-                             "antenna_rear_leg_ratio",
-                             "rear_trochanter_length_standard")
-CWMs <- FD::functcomp(traits[,c("PC1", "PC2", "PC3", 
-                                     numeric_traits_modified,
-                                     "antenna_length_standard",
-                                     "eye_protrusion_standard",
-                                     "Water_affinity", "Flight_capability")], 
-          as.matrix(g_stdz[, carab_species]), CWM.type = "all")
+trait_list_standard <- c("body_length", "antenna_length_standard", "eye_protrusion_standard",
+                         "eye_length_standard", "pronotum_width_standard",
+                         "abdomen_width_standard", "rear_leg_length_standard", 
+                         "rear_trochanter_length_standard", "Water_affinity", 
+                         "Flight_capability")
+CWMs <- FD::functcomp(traits[,c("PC1", "PC2", "PC3", trait_list_standard)], 
+          as.matrix(g_stdz[, carab_species_1st_6]), CWM.type = "all")
 
 # Join to the data table:
 g_stdz_with_CWMs <- cbind(g_stdz, CWMs)
@@ -659,8 +634,9 @@ ordered_spp <- c("Notiophilus_aeneus", "Sphaeroderus_canadensis", "Sphaeroderus_
                  "Apenes_lucidula", "Galerita_bicolor")
 
 # Make a table of the counts for each species and each year:
+
 count_table <- data.frame(species = ordered_spp,
-                          counts_2015_w = unname(colSums(windthrow_2015[,ordered_spp])),
+                          counts_2015_w = unname(colSums(g %>% filter(Year==2015, Treatment=="Windthrow") %>% select(all_of(ordered_spp)))),
                           counts_2015_s = unname(colSums(salvaged_2015[,ordered_spp])),
                           counts_2015_f = unname(colSums(forest_2015[,ordered_spp])),
                           counts_2022_excluding_last_2_int_w = unname(colSums(windthrow_2022[,ordered_spp])),

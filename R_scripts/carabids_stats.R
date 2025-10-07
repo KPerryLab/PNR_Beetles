@@ -197,11 +197,6 @@ anova(model_mpd)
 
 # PC1 #########################################################################
 
-# First I'll do PC1. This variable is a trait syndrome associated with
-# longer limbs (longer legs and probably longer antennae), shorter trochanter
-# which is associated with less powerful pushing from legs, and a narrower
-# pronotum, possibly to reach into small crevices.
-
 # graph the data:
 ggplot(dat, aes(x=Year_Treatment, y=PC1)) + geom_quasirandom(alpha=0.5, width=0.1)
 
@@ -220,9 +215,6 @@ qqline(residuals(model_PC1))
 
 # run the ANOVA test:
 anova(model_PC1, type=3)
-
-# run the post-hoc test for pairwise comparisons:
-emmeans(model_PC1, pairwise~Treatment)
 
 # Higher PC1 is associated with proportionally narrower pronotum, proportionally 
 # longer rear legs, and proportionally shorter rear trochanter
@@ -276,11 +268,6 @@ anova(model_PC3, type=3)
 emmeans(model_PC3, pairwise ~ Treatment)
 
 # Individual functional traits #################################################
-
-# The traits are: body length, stdzd antenna length, antenna:rear leg ratio, stdzd rear leg length,
-# stdzd eye length, stdzd eye protrusion, eye protrusion:eye length ratio, 
-# stdzd pronotum width, stdzd abdomen width,  stdzd rear trochanter length, 
-# flight capability, and water affinity
 
 # Body length ##################################################################
 
@@ -692,9 +679,10 @@ anova(model_canopy_openness, type=3)
 emmeans(model_canopy_openness, pairwise ~ Treatment | Year)
 emmeans(model_canopy_openness, pairwise ~ Year | Treatment)
 
-# Pretty graphs ###############################################################
+# Abundance richness graph #####################################################
 
 dat$Treatment <- factor(dat$Treatment, levels = c("Windthrow", "Salvaged", "Forest"))
+treatment_colors = c("Forest" = "palegreen3", "Salvaged" = "goldenrod2", "Windthrow" = "brown4")
 
 abundance_graph <- ggplot(dat, aes(x = Treatment, y = total_count_stdz, fill = Year, group = Year)) + 
   stat_summary(fun = mean, geom = "bar", color="black", position = position_dodge(width = 0.9)) +
@@ -729,7 +717,196 @@ empty_graph <- ggplot() + theme_void()
 ggarrange(abundance_graph, empty_graph, richness_graph,
           labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1, 0.1, 1), legend = "right")
 
-# legend.position = "none"
+# Abundance of open-habitat, eurytopic, and forest-specialists graph ###########
+
+abundance_oe_graph <- ggplot(dat, aes(x = Treatment, 
+                                      y = eurytopic_spp_stdz + open_habitat_spp_stdz, fill = Year, group = Year)) + 
+  stat_summary(fun = mean, geom = "bar", color="black", position = position_dodge(width = 0.9)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9)) +
+  ylab("Open-habitat or eurytopic \nindividuals / plot") + theme(plot.title = element_text(size=18),
+                                                                          axis.title.x = element_blank(),
+                                                                          axis.title.y = element_text(size = 16, 
+                                                                                                      margin = margin(r=20)),
+                                                                          axis.text.x = element_text(size = 14),
+                                                                          axis.text.y = element_text(size = 14),
+                                                                          legend.title = element_text(size = 14),
+                                                                          legend.text = element_text(size = 14))+
+  scale_fill_grey() + coord_cartesian(ylim = c(0,60))
+abundance_oe_graph
+
+abundance_forest_graph <- ggplot(dat, aes(x = Treatment, 
+                                          y = forest_specialist_spp_stdz, fill = Year, group = Year)) + 
+  stat_summary(fun = mean, geom = "bar", color="black", position = position_dodge(width = 0.9)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9)) +
+  ylab("Forest-specialist \nindividuals / plot") + theme(plot.title = element_text(size=18),
+                                                         axis.title.x = element_blank(),
+                                                         axis.title.y = element_text(size = 16, 
+                                                                                     margin = margin(r=20)),
+                                                         axis.text.x = element_text(size = 14),
+                                                         axis.text.y = element_text(size = 14),
+                                                         legend.title = element_text(size = 14),
+                                                         legend.text = element_text(size = 14))+
+  scale_fill_grey() + coord_cartesian(ylim = c(0,60))
+abundance_forest_graph
+#angle = 45, hjust = 1 
+empty_graph <- ggplot() + theme_void()
+
+ggarrange(abundance_oe_graph, empty_graph, abundance_forest_graph,
+          labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1,0.1,1))
+
+# Trait graphs #######################################
+
+body_length_graph <- ggplot(dat, aes(x = Treatment, y = body_length, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Body length (mm)") + theme(plot.title = element_text(size=18),
+                                                       axis.title.x = element_blank(),
+                                                       axis.title.y = element_text(size = 16, 
+                                                                                   margin = margin(r=20)),
+                                                       axis.text.x = element_text(size = 14),
+                                                       axis.text.y = element_text(size = 14),
+                                                       legend.position = "none",
+                                   plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+body_length_graph
+
+flight_graph <- ggplot(dat, aes(x = Treatment, y = Flight_capability, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Proportion of individuals\nflight capable") + theme(plot.title = element_text(size=18),
+                                              axis.title.x = element_blank(),
+                                              axis.title.y = element_text(size = 16, 
+                                                                          margin = margin(r=20)),
+                                              axis.text.x = element_text(size = 14),
+                                              axis.text.y = element_text(size = 14),
+                                              legend.title = element_text(size = 14),
+                                              legend.text = element_text(size = 14),
+                                              legend.background = element_rect(color = "black",
+                                                                               linewidth = 0.2),
+                                              legend.box.margin = margin(5, 5, 5, 20),
+                                              plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+flight_graph
+
+eye_length_graph <- ggplot(dat, aes(x = Treatment, y = eye_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Eye length:\nbody length") + theme(plot.title = element_text(size=18),
+                                                       axis.title.x = element_blank(),
+                                                       axis.title.y = element_text(size = 16, 
+                                                                                   margin = margin(r=20)),
+                                                       axis.text.x = element_text(size = 14),
+                                                       axis.text.y = element_text(size = 14),
+                                                       legend.position = "none",
+                                           plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+eye_length_graph
+
+eye_protrusion_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_standard, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Eye protrusion:\nbody length") + theme(plot.title = element_text(size=18),
+                                           axis.title.x = element_blank(),
+                                           axis.title.y = element_text(size = 16, 
+                                                                       margin = margin(r=20)),
+                                           axis.text.x = element_text(size = 14),
+                                           axis.text.y = element_text(size = 14),
+                                           legend.title = element_text(size = 14),
+                                           legend.text = element_text(size = 14),
+                                           legend.background = element_rect(color = "black",
+                                                                            linewidth = 0.2),
+                                           legend.box.margin = margin(5, 5, 5, 20),
+                                           plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+eye_protrusion_graph
+
+eye_protrusion_ratio_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_ratio, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  scale_y_continuous(breaks = seq(1,1.2,0.02)) +
+  ylab("Eye protrusion:\neye length") + theme(plot.title = element_text(size=18),
+                                              axis.title.x = element_blank(),
+                                              axis.title.y = element_text(size = 16, 
+                                                                          margin = margin(r=20)),
+                                              axis.text.x = element_text(size = 14),
+                                              axis.text.y = element_text(size = 14),
+                                              legend.position = "none",
+                                              plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+eye_protrusion_ratio_graph
+
+trochanter_graph <- ggplot(dat, aes(x = Treatment, y = rear_trochanter_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Rear trochanter length:\nbody length") + theme(plot.title = element_text(size=18),
+                                               axis.title.x = element_blank(),
+                                               axis.title.y = element_text(size = 16, 
+                                                                           margin = margin(r=20)),
+                                               axis.text.x = element_text(size = 14),
+                                               axis.text.y = element_text(size = 14),
+                                               legend.title = element_text(size = 14),
+                                               legend.text = element_text(size = 14),
+                                               legend.background = element_rect(color = "black",
+                                                                                linewidth = 0.2),
+                                               legend.box.margin = margin(5, 5, 5, 20),
+                                               plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+trochanter_graph
+
+antenna_graph <- ggplot(dat, aes(x = Treatment, y = antenna_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Antenna length : \nbody length") + theme(plot.title = element_text(size=18),
+                                              axis.title.x = element_blank(),
+                                              axis.title.y = element_text(size = 16, 
+                                                                          margin = margin(r=20)),
+                                              axis.text.x = element_text(size = 14),
+                                              axis.text.y = element_text(size = 14),
+                                              legend.position = "none",
+                                              plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+antenna_graph
+
+water_graph <- ggplot(dat, aes(x = Treatment, y = Water_affinity, shape=Year, group = Year, color=Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Mean water affinity") + theme(plot.title = element_text(size=18),
+                                      axis.title.x = element_blank(),
+                                      axis.title.y = element_text(size = 16, margin = margin(r=20)),
+                                      axis.text.x = element_text(size = 14),
+                                      axis.text.y = element_text(size = 14),
+                                      legend.title = element_text(size = 14),
+                                      legend.text = element_text(size = 14),
+                                      legend.background = element_rect(color = "black",linewidth = 0.2),
+                                                       legend.box.margin = margin(5, 5, 5, 20),
+                                      plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors)
+water_graph
+
+empty_graph <- ggplot() + theme_void()
+
+ggarrange(body_length_graph,              empty_graph,    flight_graph, 
+          eye_length_graph,               empty_graph,    trochanter_graph,
+          antenna_graph,                  empty_graph,    water_graph,
+          labels = c("A", "", "B",
+                     "C", "", "D",
+                     "E", "", "F"), ncol=3, nrow=3, widths = rep(c(0.7, 0.1, 1), 3))
+
+ggarrange(body_length_graph, flight_graph, 
+          eye_length_graph, trochanter_graph,
+          antenna_graph, water_graph,
+          labels = c("A", "B",
+                     "C", "D",
+                     "E", "F"), ncol=2, nrow=3,
+          align = "h", widths = rep(c(0.7, 1), 3))
 
 # Make summary data tables for treatment means: ################################
 
@@ -751,6 +928,34 @@ dat_by_treatment <- dat %>% group_by(Year, Treatment) %>%
   summarize(across(all_of(response_vars), ~ mean_concat_std_error(.)))
 
 #write.csv(dat_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_response_vars_by_treatment.csv", row.names = F)
+
+# Make a species summary table:
+# Order the species according to Bousquet 2012:
+ordered_spp <- c("Notiophilus_aeneus", "Sphaeroderus_canadensis", "Sphaeroderus_stenostomus",
+                 "Scaphinotus_viduus", "Scaphinotus_imperfectus", "Carabus_goryi",
+                 "Lophoglossus_scrutator", "Pterostichus_mutus", "Pterostichus_corvinus",
+                 "Pterostichus_sayanus", "Pterostichus_coracinus", "Pterostichus_melanarius",
+                 "Pterostichus_lachrymosus", "Pterostichus_stygicus", "Pterostichus_hamiltoni",
+                 "Pterostichus_moestus", "Pterostichus_diligendus", "Pterostichus_rostratus",
+                 "Pterostichus_adoxus", "Pterostichus_tristis", "Cyclotrachelus_fucatus",
+                 "Cyclotrachelus_convivus", "Cyclotrachelus_sigillatus", "Chlaenius_emarginatus",
+                 "Chlaenius_laticollis", "Dicaelus_politus", "Dicaelus_teter",
+                 "Notiobia_nitidipennis", "Anisodactylus_harrisii", "Anisodactylus_melanopus",
+                 "Anisodactylus_nigerrimus", "Amphasia_interstitialis", "Agonoleptus_thoracicus",
+                 "Harpalus_spadiceus", "Trichotichnus_autumnalis", "Pseudamara_arenaria",
+                 "Olisthopus_parmatus", "Agonum_ferreum", "Agonum_fidele",
+                 "Agonum_retractum", "Platynus_decentis", "Platynus_tenuicollis",
+                 "Platynus_angustatus", "Cymindis_limbata", "Cymindis_platicollis",
+                 "Apenes_lucidula", "Galerita_bicolor")
+
+mean_times_6 <- function(x) {
+  return(round(mean(x)*6, 1))
+}
+
+#write.csv(spp_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_standardized_carabid_counts_summary.csv", row.names = F)
+
+spp_by_treatment <- dat %>% group_by(Year, Treatment) %>%
+  summarize(across(all_of(ordered_spp), mean_times_6))
 
 env_vars <- c("mean_moisture", "VegAvg", "LitterAvg", "Densi.Total")
 
