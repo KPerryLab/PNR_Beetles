@@ -698,6 +698,30 @@ abundance_graph <- ggplot(dat, aes(x = Treatment, y = total_count_stdz, fill = Y
   scale_fill_grey()
 abundance_graph
 
+abundance_graph_1 <- ggplot(dat, aes(x = Treatment, 
+                                        y = total_count_stdz, shape = Year, group = Year,
+                                        color = Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9),
+               color="black") +
+  ylab("Number of individuals / plot") + theme(plot.title = element_text(size=18),
+                                                                          axis.title.x = element_blank(),
+                                                                          axis.title.y = element_text(size = 16, 
+                                                                                                      margin = margin(r=20)),
+                                                                          axis.text.x = element_text(size = 14),
+                                                                          axis.text.y = element_text(size = 14),
+                                                                          legend.title = element_text(size = 14),
+                                                                          legend.text = element_text(size = 14),
+                                                                          legend.background = element_rect(color = "black",
+                                                                                                           linewidth = 0.2),
+                                                                          legend.box.margin = margin(5, 5, 5, 20),
+                                                                          plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors) + coord_cartesian(ylim = c(0,185)) # I think coord_cartesian prevents
+# the mean from being influenced, just because some of the data points fall
+# outside the scale range
+abundance_graph_1
+
 richness_graph <- ggplot(dat, aes(x=Treatment, y=sp_rich, fill=Year, group=Year)) + 
   stat_summary(fun = mean, geom = "bar", color="black", position=position_dodge(width=0.9)) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position=position_dodge(width=0.9)) +
@@ -712,10 +736,36 @@ richness_graph <- ggplot(dat, aes(x=Treatment, y=sp_rich, fill=Year, group=Year)
   scale_fill_grey()
 richness_graph
 
+richness_graph_1 <- ggplot(dat, aes(x = Treatment, 
+                                     y = sp_rich, shape = Year, group = Year,
+                                     color = Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9),
+               color="black") +
+  ylab("Number of species / plot") + theme(plot.title = element_text(size=18),
+                                               axis.title.x = element_blank(),
+                                               axis.title.y = element_text(size = 16, 
+                                                                           margin = margin(r=20)),
+                                               axis.text.x = element_text(size = 14),
+                                               axis.text.y = element_text(size = 14),
+                                               legend.title = element_text(size = 14),
+                                               legend.text = element_text(size = 14),
+                                               legend.background = element_rect(color = "black",
+                                                                                linewidth = 0.2),
+                                               legend.box.margin = margin(5, 5, 5, 20),
+                                               plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors) + coord_cartesian(ylim = c(0,16)) # I think coord_cartesian prevents
+# the mean from being influenced, just because some of the data points fall
+# outside the scale range
+richness_graph_1
+
 empty_graph <- ggplot() + theme_void()
 
-ggarrange(abundance_graph, empty_graph, richness_graph,
+ggarrange(abundance_graph_1, empty_graph, richness_graph_1,
           labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1, 0.1, 1), legend = "right")
+
+# Abundance 
 
 # Abundance of open-habitat, eurytopic, and forest-specialists graph ###########
 
@@ -754,19 +804,80 @@ empty_graph <- ggplot() + theme_void()
 ggarrange(abundance_oe_graph, empty_graph, abundance_forest_graph,
           labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1,0.1,1))
 
+# MODIFIED Abundance of open-habitat, eurytopic, and forest-specialists graph ###########
+
+abundance_oe_graph_1 <- ggplot(dat, aes(x = Treatment, 
+                                      y = eurytopic_spp_stdz + open_habitat_spp_stdz, shape = Year, group = Year,
+                                      color = Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9),
+               color="black") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
+  ylab("Open-habitat or habitat-generalist \nindividuals / plot") + theme(plot.title = element_text(size=18),
+                                                                        axis.title.x = element_blank(),
+                                                                        axis.title.y = element_text(size = 16, 
+                                                                                                    margin = margin(r=20)),
+                                                                        axis.text.x = element_text(size = 14),
+                                                                        axis.text.y = element_text(size = 14),
+                                                                        legend.title = element_text(size = 14),
+                                                                        legend.text = element_text(size = 14),
+                                                                        legend.background = element_rect(color = "black",
+                                                                                                         linewidth = 0.2),
+                                                                        legend.box.margin = margin(5, 5, 5, 20),
+                                                                        plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors) + coord_cartesian(ylim = c(0,100)) # I think coord_cartesian prevents
+# the mean from being influenced, just because some of the data points fall
+# outside the scale range
+abundance_oe_graph_1
+
+abundance_forest_graph_1 <- ggplot(dat, aes(x = Treatment, 
+                                        y = forest_specialist_spp_stdz, shape = Year, group = Year,
+                                        color = Treatment)) + 
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9),
+               color="black") + guides(color = "none") +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  ylab("Forest-specialist \nindividuals / plot") + theme(plot.title = element_text(size=18),
+                                                                          axis.title.x = element_blank(),
+                                                                          axis.title.y = element_text(size = 16, 
+                                                                                                      margin = margin(r=20)),
+                                                                          axis.text.x = element_text(size = 14),
+                                                                          axis.text.y = element_text(size = 14),
+                                                                          legend.title = element_text(size = 14),
+                                                                          legend.text = element_text(size = 14),
+                                                                          legend.background = element_rect(color = "black",
+                                                                                                           linewidth = 0.2),
+                                                                          legend.box.margin = margin(5, 5, 5, 20),
+                                                                          plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors) + coord_cartesian(ylim = c(0,100)) # I think coord_cartesian prevents
+# the mean from being influenced, just because some of the data points fall
+# outside the scale range
+abundance_forest_graph_1
+
+ggarrange(abundance_oe_graph_1, empty_graph, abundance_forest_graph_1,
+          labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1,0.1,1))
+
+# Is the abundance of forest specialists correlated with that of eurytopic 
+# and open-habitat specialists?
+plot(dat$forest_specialist_spp_stdz, dat$eurytopic_spp_stdz + dat$open_habitat_spp_stdz)
+
 # Trait graphs #######################################
 
 body_length_graph <- ggplot(dat, aes(x = Treatment, y = body_length, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Body length (mm)") + theme(plot.title = element_text(size=18),
-                                                       axis.title.x = element_blank(),
-                                                       axis.title.y = element_text(size = 16, 
-                                                                                   margin = margin(r=20)),
-                                                       axis.text.x = element_text(size = 14),
-                                                       axis.text.y = element_text(size = 14),
-                                                       legend.position = "none",
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
+  ylab("CWM Body \nlength (mm)") + theme(plot.title = element_text(size=18),
+                                   axis.title.x = element_blank(),
+                                   axis.title.y = element_text(size = 16, 
+                                                               margin = margin(r=20)),
+                                   axis.text.x = element_text(size = 14),
+                                   axis.text.y = element_text(size = 14),
+                                   legend.title = element_text(size = 14),
+                                   legend.text = element_text(size = 14),
+                                   legend.background = element_rect(color = "black",
+                                                                    linewidth = 0.2),
+                                   legend.box.margin = margin(5, 5, 5, 20),
                                    plot.margin = margin(10, 10, 10, 10)) +
   scale_color_manual(values=treatment_colors)
 body_length_graph
@@ -774,8 +885,8 @@ body_length_graph
 flight_graph <- ggplot(dat, aes(x = Treatment, y = Flight_capability, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Proportion of individuals\nflight capable") + theme(plot.title = element_text(size=18),
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
+  ylab("CWM flight capability") + theme(plot.title = element_text(size=18),
                                               axis.title.x = element_blank(),
                                               axis.title.y = element_text(size = 16, 
                                                                           margin = margin(r=20)),
@@ -793,22 +904,26 @@ flight_graph
 eye_length_graph <- ggplot(dat, aes(x = Treatment, y = eye_length_standard, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Eye length:\nbody length") + theme(plot.title = element_text(size=18),
-                                                       axis.title.x = element_blank(),
-                                                       axis.title.y = element_text(size = 16, 
-                                                                                   margin = margin(r=20)),
-                                                       axis.text.x = element_text(size = 14),
-                                                       axis.text.y = element_text(size = 14),
-                                                       legend.position = "none",
-                                           plot.margin = margin(10, 10, 10, 10)) +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
+  ylab("CWM proportional \neye length") + theme(plot.title = element_text(size=18),
+                                               axis.title.x = element_blank(),
+                                               axis.title.y = element_text(size = 16, 
+                                                                           margin = margin(r=20)),
+                                               axis.text.x = element_text(size = 14),
+                                               axis.text.y = element_text(size = 14),
+                                               legend.title = element_text(size = 14),
+                                               legend.text = element_text(size = 14),
+                                               legend.background = element_rect(color = "black",
+                                                                                linewidth = 0.2),
+                                               legend.box.margin = margin(5, 5, 5, 20),
+                                               plot.margin = margin(10, 10, 10, 10)) +
   scale_color_manual(values=treatment_colors)
 eye_length_graph
 
 eye_protrusion_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_standard, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   ylab("Eye protrusion:\nbody length") + theme(plot.title = element_text(size=18),
                                            axis.title.x = element_blank(),
                                            axis.title.y = element_text(size = 16, 
@@ -827,7 +942,7 @@ eye_protrusion_graph
 eye_protrusion_ratio_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_ratio, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   scale_y_continuous(breaks = seq(1,1.2,0.02)) +
   ylab("Eye protrusion:\neye length") + theme(plot.title = element_text(size=18),
                                               axis.title.x = element_blank(),
@@ -843,8 +958,8 @@ eye_protrusion_ratio_graph
 trochanter_graph <- ggplot(dat, aes(x = Treatment, y = rear_trochanter_length_standard, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Rear trochanter length:\nbody length") + theme(plot.title = element_text(size=18),
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
+  ylab("CWM proportional \nrear trochanter length") + theme(plot.title = element_text(size=18),
                                                axis.title.x = element_blank(),
                                                axis.title.y = element_text(size = 16, 
                                                                            margin = margin(r=20)),
@@ -862,23 +977,27 @@ trochanter_graph
 antenna_graph <- ggplot(dat, aes(x = Treatment, y = antenna_length_standard, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Antenna length : \nbody length") + theme(plot.title = element_text(size=18),
-                                              axis.title.x = element_blank(),
-                                              axis.title.y = element_text(size = 16, 
-                                                                          margin = margin(r=20)),
-                                              axis.text.x = element_text(size = 14),
-                                              axis.text.y = element_text(size = 14),
-                                              legend.position = "none",
-                                              plot.margin = margin(10, 10, 10, 10)) +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
+  ylab("CWM proportional \nantenna length") + theme(plot.title = element_text(size=18),
+                                                 axis.title.x = element_blank(),
+                                                 axis.title.y = element_text(size = 16, 
+                                                                             margin = margin(r=20)),
+                                                 axis.text.x = element_text(size = 14),
+                                                 axis.text.y = element_text(size = 14),
+                                                 legend.title = element_text(size = 14),
+                                                 legend.text = element_text(size = 14),
+                                                 legend.background = element_rect(color = "black",
+                                                                                  linewidth = 0.2),
+                                                 legend.box.margin = margin(5, 5, 5, 20),
+                                                 plot.margin = margin(10, 10, 10, 10)) +
   scale_color_manual(values=treatment_colors)
 antenna_graph
 
 water_graph <- ggplot(dat, aes(x = Treatment, y = Water_affinity, shape=Year, group = Year, color=Treatment)) + 
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +
-  ylab("Mean water affinity") + theme(plot.title = element_text(size=18),
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
+  ylab("CWM water affinity") + theme(plot.title = element_text(size=18),
                                       axis.title.x = element_blank(),
                                       axis.title.y = element_text(size = 16, margin = margin(r=20)),
                                       axis.text.x = element_text(size = 14),
@@ -893,12 +1012,13 @@ water_graph
 
 empty_graph <- ggplot() + theme_void()
 
-ggarrange(body_length_graph,              empty_graph,    flight_graph, 
-          eye_length_graph,               empty_graph,    trochanter_graph,
-          antenna_graph,                  empty_graph,    water_graph,
+ggarrange(body_length_graph + theme(legend.position = "none"),              empty_graph,    flight_graph+ theme(legend.position = "none"), 
+          eye_length_graph + theme(legend.position = "none"),               empty_graph,    trochanter_graph+ theme(legend.position = "none"),
+          antenna_graph + theme(legend.position = "none"),                  empty_graph,    water_graph+ theme(legend.position = "none"),
           labels = c("A", "", "B",
                      "C", "", "D",
-                     "E", "", "F"), ncol=3, nrow=3, widths = rep(c(0.7, 0.1, 1), 3))
+                     "E", "", "F"), ncol=3, nrow=3, widths = rep(c(1, 0.1, 1), 3),
+          align="v")
 
 ggarrange(body_length_graph, flight_graph, 
           eye_length_graph, trochanter_graph,
@@ -906,7 +1026,7 @@ ggarrange(body_length_graph, flight_graph,
           labels = c("A", "B",
                      "C", "D",
                      "E", "F"), ncol=2, nrow=3,
-          align = "h", widths = rep(c(0.7, 1), 3))
+          align = "v", widths = rep(c(1, 1), 3))
 
 # Make summary data tables for treatment means: ################################
 
@@ -914,9 +1034,9 @@ response_vars <- c("total_count_stdz", "open_habitat_spp_stdz",
                    "eurytopic_spp_stdz", "forest_specialist_spp_stdz",
                    "sp_rich", "shannon_diversity", "mean_pairwise_distance",
                    "PC1", "PC2", "PC3", "body_length","antenna_length_standard",
-                   "rear_leg_length_standard", "antenna_rear_leg_ratio",
+                   "rear_leg_length_standard",
                    "eye_length_standard", "eye_protrusion_standard",
-                   "eye_protrusion_ratio", "pronotum_width_standard", 
+                   "pronotum_width_standard", 
                    "abdomen_width_standard", "rear_trochanter_length_standard", 
                    "Water_affinity", "Flight_capability")
 
@@ -927,7 +1047,7 @@ mean_concat_std_error <- function(x) {
 dat_by_treatment <- dat %>% group_by(Year, Treatment) %>%
   summarize(across(all_of(response_vars), ~ mean_concat_std_error(.)))
 
-#write.csv(dat_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_response_vars_by_treatment.csv", row.names = F)
+write.csv(dat_by_treatment, "Aaron_PNR_formatted_data/PNR2015_2022_response_by_treatment.csv", row.names = F)
 
 # Make a species summary table:
 # Order the species according to Bousquet 2012:

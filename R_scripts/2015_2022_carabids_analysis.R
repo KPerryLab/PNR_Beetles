@@ -114,6 +114,33 @@ ggplot(data=carab_by_interval_2015, aes(x=Interval, y=total_count_stdz)) +
   geom_point(data=carab_by_interval_2022, aes(x=Interval, y=total_count_stdz), color="blue") +
   geom_line(data=carab_by_interval_2022, aes(x=Interval, y=total_count_stdz), color="blue") + ylim(0,12)
 
+# Investigate number of species found #########################################
+
+# Make a list of species found in each year (including all intervals)
+species_2015 <- names(which((colSums(carab_by_interval_2015[,carab_species]) > 0)))
+species_2022 <- names(which((colSums(carab_by_interval_2022[,carab_species]) > 0)))
+species_2022_excluding_last_2_int <- names(which((colSums(carab_by_interval_2022[1:6,carab_species]) > 0)))
+species_2022_last_2_int <- names(which((colSums(carab_by_interval_2022[7:8,carab_species]) > 0)))
+
+# How many species were found in both years?
+base::intersect(species_2015, species_2022)
+# Overall, 28 species were found in both years
+
+# How many species were found only in 2022?
+base::setdiff(species_2022, species_2015)
+# 18 species were found in 2022 but not in 2015
+
+# How many spp were found only in 2015?
+base::setdiff(species_2015, species_2022)
+# 9 species were found in 2015 but not 2022
+
+# How many species were found in either 2015 and/or in 2022 in the first 6 intervals?
+species_2015_2022_1st_6 <- union(species_2015, species_2022_excluding_last_2_int)
+
+# How many species were found in both 2015 AND 2022 in the first 6 intervals?
+base::intersect(species_2015, species_2022_excluding_last_2_int)
+
+
 # Data standardization - by plot ###############################################
 
 # First, calculate totals across all sampling intervals for each plot in each year
@@ -159,31 +186,6 @@ g_stdz$total_count_stdz <- rowSums(g_stdz[,carab_species_1st_6]) # totals for th
 sum(g_stdz %>% filter(Year==2015) %>% select(total_count_stdz)) 
 sum(g_stdz %>% filter(Year==2022) %>% select(total_count_stdz)) 
 
-# Investigate number of species found #########################################
-
-# Make a list of species found in each year (including all intervals)
-species_2015 <- names(which((colSums(carab_by_interval_2015[,carab_species]) > 0)))
-species_2022 <- names(which((colSums(carab_by_interval_2022[,carab_species]) > 0)))
-species_2022_excluding_last_2_int <- names(which((colSums(carab_by_interval_2022[1:6,carab_species]) > 0)))
-species_2022_last_2_int <- names(which((colSums(carab_by_interval_2022[7:8,carab_species]) > 0)))
-
-# How many species were found in both years?
-base::intersect(species_2015, species_2022)
-# Overall, 28 species were found in both years
-
-# How many species were found only in 2022?
-base::setdiff(species_2022, species_2015)
-# 18 species were found in 2022 but not in 2015
-
-# How many spp were found only in 2015?
-base::setdiff(species_2015, species_2022)
-# 9 species were found in 2015 but not 2022
-
-# How many species were found in either 2015 and/or in 2022 in the first 6 intervals?
-species_2015_2022_1st_6 <- union(species_2015, species_2022_excluding_last_2_int)
-
-# How many species were found in both 2015 AND 2022 in the first 6 intervals?
-base::intersect(species_2015, species_2022_excluding_last_2_int)
 
 # Species accumulation curves #################################################
 # Using the raw, unstandardized counts of carabids
@@ -343,6 +345,9 @@ ggplot(data=g_stdz %>% filter(Year==2022), aes(x=Treatment, y=mean_pairwise_dist
 
 # Taxonomic beta-diversity ###################################################
 
+treatment_colors = c("Forest" = "palegreen3", "Salvaged" = "goldenrod2", "Windthrow" = "brown4")
+g_stdz$Treatment <- factor(g_stdz$Treatment, levels = c("Windthrow", "Salvaged", "Forest"))
+
 # First, I need to convert my data table to relative abundance data:
 g_stdz_rel <- vegan::decostand(g_stdz[carab_species_1st_6], method = "total")
 
@@ -355,56 +360,52 @@ hist(as.vector(dist_spp_space))
 # then the dissimilarity is 1.
 
 # Now create nonmetric multidimensional scaling ordinations: # TRYING 3 dimensions:
-#nmds <- metaMDS(dist_spp_space, trymax = 500, k = 3)
-#nmds # stress is quality of fit
-#stressplot(nmds)
-#g_stdz$NMDS1 <- nmds$points[,1]
-#g_stdz$NMDS2 <- nmds$points[,2]
-#g_stdz$NMDS3 <- nmds$points[,3]
-#treatment_colors_with_treatments = c("Forest" = "palegreen3", "Salvaged" = "goldenrod2", "Windthrow" = "brown4")[g_stdz$Treatment]
-#plot3d(g_stdz$NMDS1, g_stdz$NMDS2, g_stdz$NMDS3, col = treatment_colors)
-#plot3d(g_stdz$NMDS1, g_stdz$NMDS2, g_stdz$NMDS3, col = g_stdz$Year)
+nmds3d <- metaMDS(dist_spp_space, trymax = 500, k = 3)
+nmds3d # stress is quality of fit
+stressplot(nmds3d)
+g_stdz$NMDS3d1 <- nmds3d$points[,1]
+g_stdz$NMDS3d2 <- nmds3d$points[,2]
+g_stdz$NMDS3d3 <- nmds3d$points[,3]
+#plot3d(g_stdz$NMDS3d1, g_stdz$NMDS3d2, g_stdz$NMDS3d3, col = treatment_colors)
+#plot3d(g_stdz$NMDS3d1, g_stdz$NMDS3d2, g_stdz$NMDS3d3, col = g_stdz$Year)
+area_colors = c("southwest"="green", "northeast"="blue")
+#plot3d(g_stdz$NMDS3d1, g_stdz$NMDS3d2, g_stdz$NMDS3d3, col = area_colors)
 
-
-# Now create nonmetric multidimensional scaling ordinations:
+# Now create nonmetric multidimensional scaling ordination with 2 dimensions:
 nmds <- metaMDS(dist_spp_space, trymax = 500, k = 2)
 nmds # stress is quality of fit
 stressplot(nmds)
 g_stdz$NMDS1 <- nmds$points[,1]
 g_stdz$NMDS2 <- nmds$points[,2]
 
-treatment_colors = c("Forest" = "palegreen3", "Salvaged" = "goldenrod2", "Windthrow" = "brown4")
-g_stdz$Treatment <- factor(g_stdz$Treatment, levels = c("Windthrow", "Salvaged", "Forest"))
-
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Year)) + 
-  geom_point(size=2)
+  geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Area)) + 
-  geom_point(size=2)
+  geom_point(size=2)+ coord_fixed()
+
+ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Area, shape = Year)) + 
+  geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Transect)) + 
-  geom_point(size=2)
+  geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment)) + 
-  geom_point(size=2) + scale_color_manual(values = treatment_colors)
+  geom_point(size=2) + scale_color_manual(values = treatment_colors)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors) + coord_fixed() +
   theme(legend.position = "none")
 
 taxonomic_NMDS <- ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year, group=Plot)) + 
-  geom_point(size=3) + geom_line(linewidth=1) + scale_color_manual(values = treatment_colors) +
+  geom_point(size=2) + scale_color_manual(values = treatment_colors) +
   coord_fixed() + scale_x_continuous(limits = c(-1.8,1.8)) + scale_y_continuous(limits = c(-1.8,1.8)) +
-  theme(axis.text = element_blank())
+  theme(axis.text = element_blank(),
+        legend.background = element_rect(color = "black", linewidth = 0.2),
+        legend.box.margin = margin(5, 5, 5, 20))
+taxonomic_NMDS
 
 # Now run the Permutational Multivariate Analysis of Variance (PERMANOVA):
-
-# Make species abundance matrix for only the windthrow and salvaged plots: ####
-#g_stdz_ws <- g_stdz %>% filter(Treatment != "Forest") # ws stands for windthrow salvaged
-#g_stdz_rel_ws <- vegan::decostand(g_stdz_ws[carab_species], method = "total")
-
-# Make a distance matrix between plots using this subset of plots:
-#dist_spp_space_ws <- vegdist(g_stdz_rel_ws, method = "bray")
 
 adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
         permutations = 999, by="terms") # May need to change this to by="margin"
@@ -412,11 +413,18 @@ adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
 # Because the p-value of the adonis2 function is changing each time I run
 # the line of code, I'll need to increase the number of permutations so that 
 # I get a more consistent p-value:
-#adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
-#        permutations = 99999, by="terms")
+adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
+        permutations = 99999, by="terms")
+
+# I was initially only going to test for differences between salvaged and windthrow:
+# OUTDATED: Make species abundance matrix for only the windthrow and salvaged plots:
+#g_stdz_ws <- g_stdz %>% filter(Treatment != "Forest") # ws stands for windthrow salvaged
+#g_stdz_rel_ws <- vegan::decostand(g_stdz_ws[carab_species], method = "total")
+# Make a distance matrix between plots using this subset of plots:
+#dist_spp_space_ws <- vegdist(g_stdz_rel_ws, method = "bray")
 
 # JUST TO TRY IT OUT: Also, try a PERMANOVA with area (northeast blowdown or southwest blowdown):
-# adonis2(dist_spp_space ~ Area, data=g_stdz, permutations = 999, by="terms")
+adonis2(dist_spp_space ~ Area, data=g_stdz, permutations = 999, by="terms")
 
 # Run the pairwise adonis test:
 pairwise.adonis(dist_spp_space, g_stdz$Treatment)
@@ -448,8 +456,23 @@ anova(beta_dispersion_year)
 dist_functional_beta <- comdist(comm = g_stdz_matrix, # the activity-abundance data for each plot
                                      dis = dist, # the Gower distance between each carabid species in trait space
                                      abundance.weighted = T) # mean-pairwise distances will be weighted by species abundances
+hist(as.vector(dist_functional_beta))
 
-# Now create an NMDS ordination:
+# Now create nonmetric multidimensional scaling ordinations: # TRYING 3 dimensions:
+nmds_functional_3d <- metaMDS(dist_functional_beta, trymax = 500, k = 3)
+nmds_functional_3d # stress is quality of fit
+stressplot(nmds_functional_3d)
+g_stdz$NMDS_functional_3d1 <- nmds_functional_3d$points[,1]
+g_stdz$NMDS_functional_3d2 <- nmds_functional_3d$points[,2]
+g_stdz$NMDS_functional_3d3 <- nmds_functional_3d$points[,3]
+#plot3d(g_stdz$NMDS_functional_3d1, g_stdz$NMDS_functional_3d2, g_stdz$NMDS_functional_3d3, 
+#       col = treatment_colors)
+#plot3d(g_stdz$NMDS_functional_3d1, g_stdz$NMDS_functional_3d2, g_stdz$NMDS_functional_3d3, 
+#       col = g_stdz$Year)
+#plot3d(g_stdz$NMDS_functional_3d1, g_stdz$NMDS_functional_3d2, g_stdz$NMDS_functional_3d3, 
+#       col = area_colors)
+
+# Now create an NMDS ordination with 2 dimensions:
 nmds_functional <- metaMDS(dist_functional_beta, trymax = 500, k = 2)
 nmds_functional # stress is quality of fit
 stressplot(nmds_functional)
@@ -458,13 +481,16 @@ g_stdz$NMDS_functional1 <- nmds_functional$points[,1]
 g_stdz$NMDS_functional2 <- nmds_functional$points[,2]
 
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Year)) + 
-  geom_point(size=2)
+  geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Area)) + 
-  geom_point(size=2)
+  geom_point(size=2)+ coord_fixed()
+
+ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Area, shape=Year)) + 
+  geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment)) + 
-  geom_point(size=2) + scale_color_manual(values = treatment_colors)
+  geom_point(size=2) + scale_color_manual(values = treatment_colors)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
                         shape=Year)) + coord_fixed() + theme(legend.background = element_rect(color = "black",
@@ -474,10 +500,13 @@ ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
 
 functional_NMDS <- ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
                         shape=Year, group=Plot)) + 
-  geom_point(size=3) + geom_line(linewidth=1) + scale_color_manual(values = treatment_colors) +
+  geom_point(size=2) + scale_color_manual(values = treatment_colors) +
   xlab("NMDS1") + ylab("NMDS2") + coord_fixed() +
   scale_x_continuous(limits = c(-0.18,0.18)) + scale_y_continuous(limits = c(-0.18,0.18)) +
-  theme(axis.text = element_blank())
+  theme(axis.text = element_blank(),
+        legend.background = element_rect(color = "black", linewidth = 0.2),
+        legend.box.margin = margin(5, 5, 5, 20))
+functional_NMDS
 
 ggarrange(taxonomic_NMDS, functional_NMDS,
           labels = c("A", "B"), ncol=1, nrow=2)
@@ -490,16 +519,28 @@ ggarrange(taxonomic_NMDS, functional_NMDS,
 #dist_functional_beta_ws <- comdist(comm = g_stdz_matrix_ws, dis = dist,
 #                                abundance.weighted = T)
 
-adonis2(dist_functional_beta ~ g_stdz$Treatment + g_stdz$Year +
-          g_stdz$Treatment * g_stdz$Year,
-         permutations = 999, by="terms") 
+#adonis2(dist_functional_beta ~ g_stdz$Treatment * g_stdz$Year,
+#         permutations = 999, by="terms") 
 
-#adonis2(dist_functional_beta ~ g_stdz$Treatment + g_stdz$Year +
-#          g_stdz$Treatment * g_stdz$Year,
-#        permutations = 99999, by="terms") 
+adonis2(dist_functional_beta ~ g_stdz$Treatment * g_stdz$Year,
+        permutations = 99999, by="terms") 
 
-# Do a pairwise test to see if any of the treatment groups are different:
-pairwise.adonis(dist_functional_beta, g_stdz$Treatment)
+# Functional beta-diversity for each individual year: ##########################
+# Because there was a significant interaction term, I need to interpret the 
+# interaction, so I need to run separate PERMANOVAs for each year:
+
+g_stdz_matrix_2015 <- as.matrix(g_stdz[g_stdz$Year == 2015 ,carab_species_1st_6])
+dist_functional_beta_2015 <- comdist(comm = g_stdz_matrix_2015, # the activity-abundance data for each plot
+                                dis = dist, # the Gower distance between each carabid species in trait space
+                                abundance.weighted = T)
+adonis2(dist_functional_beta_2015 ~ Treatment, data = g_stdz[g_stdz$Year == "2015",])
+pairwise.adonis(dist_functional_beta_2015, g_stdz[g_stdz$Year == "2015","Treatment"])
+
+g_stdz_matrix_2022 <- as.matrix(g_stdz[g_stdz$Year == 2022 ,carab_species_1st_6])
+dist_functional_beta_2022 <- comdist(comm = g_stdz_matrix_2022, # the activity-abundance data for each plot
+                                     dis = dist, # the Gower distance between each carabid species in trait space
+                                     abundance.weighted = T)
+adonis2(dist_functional_beta_2022 ~ Treatment, data = g_stdz[g_stdz$Year == "2022",])
 
 # Now run an Analysis of Multivariate Homogeneity of Group Dispersions:
 beta_dispersion_functional_year <- betadisper(d = dist_functional_beta, 
@@ -526,16 +567,16 @@ anova(beta_dispersion_functional_treatment)
 
 # Make a taxonomic distance matrix just for the 2015 data:
 g_stdz_2015 <- g_stdz %>% filter(Year==2015)
-g_stdz_rel_2015 <- vegan::decostand(g_stdz_2015[carab_species], method = "total")
+g_stdz_rel_2015 <- vegan::decostand(g_stdz_2015[carab_species_1st_6], method = "total")
 dist_spp_space_2015 <- vegdist(g_stdz_rel_2015, method = "bray")
 
 # Make a taxonomic distance matrix just for the 2022 data:
 g_stdz_2022 <- g_stdz %>% filter(Year==2022)
-g_stdz_rel_2022 <- vegan::decostand(g_stdz_2022[carab_species], method = "total")
+g_stdz_rel_2022 <- vegan::decostand(g_stdz_2022[carab_species_1st_6], method = "total")
 dist_spp_space_2022 <- vegdist(g_stdz_rel_2022, method = "bray")
 
 # Import the distance between plots in meters:
-dist_geographic <- as.dist(read.csv("QGIS_map/Powdermill_dist_matrix.csv") %>% select(-Plot))
+dist_geographic <- as.dist(read.csv("newer_maps/Powdermill_dist_matrix.csv") %>% select(-Plot))
 
 # Examine the relationship between distance in geographic space and 
 # distance in species space:

@@ -372,6 +372,9 @@ trochanter_ranking <-
   combined %>% select(Species, rear_trochanter_length_standard) %>%
   arrange(rear_trochanter_length_standard)
 
+ggplot(data=trochanter_ranking, aes(x=rear_trochanter_length_standard)) +
+  geom_histogram() + xlab("Rear trochanter length : body length") + ylab("Count")
+
 # Species like Carabus goryi, Dicaelus teter, Sphaeroderus stenostomus,
 # Notiophilus aeneus, Platynus angustatus, have short trochanters. Species like 
 # Cyclotrachelus, Chlaenius, Harpalus spadiceous, Myas, have longer rear 
@@ -384,6 +387,12 @@ antenna_ranking <-
   arrange(antenna_length_standard)
 
 hist(antenna_ranking$antenna_length_standard)
+
+# Investigate eye length of various species: ##################################
+
+eye_length_ranking <- 
+  combined %>% select(Species, eye_length_standard) %>%
+  arrange(eye_length_standard)
 
 # Further investigate trait relationships: #####################################
 
