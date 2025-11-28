@@ -765,6 +765,30 @@ empty_graph <- ggplot() + theme_void()
 ggarrange(abundance_graph_1, empty_graph, richness_graph_1,
           labels = c("A", "", "B"), ncol=3, nrow=1, widths = c(1, 0.1, 1), legend = "right")
 
+funct_richness_graph_1 <- ggplot(dat, aes(x = Treatment, 
+                                    y = mean_pairwise_distance, shape = Year, group = Year,
+                                    color = Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
+  stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9),
+               color="black") +
+  ylab("Functional diversity \n(mean pairwise distance)") + theme(plot.title = element_text(size=18),
+                                           axis.title.x = element_blank(),
+                                           axis.title.y = element_text(size = 16, 
+                                                                       margin = margin(r=20)),
+                                           axis.text.x = element_text(size = 14),
+                                           axis.text.y = element_text(size = 14),
+                                           legend.title = element_text(size = 14),
+                                           legend.text = element_text(size = 14),
+                                           legend.background = element_rect(color = "black",
+                                                                            linewidth = 0.2),
+                                           legend.box.margin = margin(5, 5, 5, 20),
+                                           plot.margin = margin(10, 10, 10, 10)) +
+  scale_color_manual(values=treatment_colors) + coord_cartesian(ylim = c(0.07, 0.23)) # I think coord_cartesian prevents
+# the mean from being influenced, just because some of the data points fall
+# outside the scale range
+funct_richness_graph_1
+
 # Abundance 
 
 # Abundance of open-habitat, eurytopic, and forest-specialists graph ###########

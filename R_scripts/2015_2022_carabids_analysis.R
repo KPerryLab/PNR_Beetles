@@ -19,6 +19,9 @@ library(FD) # for community-weighted mean
 library(pairwiseAdonis)
 library(rgl) # For 3 dimensional plots
 library(ggpubr) # for the ggarrange function to put multiple graphs in one figure
+library(gridGraphics) # for use with ggpubr
+library(patchwork) # for lining up figures
+
 
 carab_0 <- read.csv("Aaron_PNR_formatted_data/PNR2015_2022_carabid_counts.csv")
 
@@ -206,43 +209,38 @@ salvaged_2015_accum <- specaccum(comm=salvaged_2015[carab_species_1st_6], method
 windthrow_2015_accum <- specaccum(comm=windthrow_2015[carab_species_1st_6], method="random", permutations=100)
 
 # Make a graph for 2015:
-par(mfrow=c(1,1))
-par(mar=c(5,6,4,2))
-plot(forest_2015_accum, pch = 19, col = "palegreen3", xvar = c("sites"), lty = 4, 
+par(mfrow=c(2,1))
+par(mar=c(4,4,2,1))
+plot(forest_2015_accum, col = "palegreen3", xvar = c("sites"), lty = 4, 
      lwd = 2, ylab = "Species Richness", xlab = "Number of plots", 
-     xlim = c(0, 12), ylim = c(0, 35))
-plot(salvaged_2015_accum, add = TRUE, pch = 15, xvar = c("sites"), lty = 1, 
-     lwd = 2, col = "goldenrod2")
-plot(windthrow_2015_accum, add = TRUE, pch = 4, xvar = c("sites"), lty = 2, 
-     lwd = 2, col = "brown4")
-
-legend("bottomright", legend = c("Forest", "Salvaged", "Windthrow"),
-       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 0.6, bty = "n", lwd = 5,
+     xlim = c(0, 12), ylim = c(0, 35)) 
+plot(salvaged_2015_accum, add=T, xvar = c("sites"), lty = 1, 
+     lwd = 2, col = "goldenrod2") 
+plot(windthrow_2015_accum, add=T, xvar = c("sites"), lty = 2, 
+     lwd = 2, col = "brown4") 
+legend("bottomright", legend = c("Forest", "Salvaged", "Windthrow"), 
+       lty = c(4,1,2), cex = 0.7, bty = "n", lwd = 2,
        col = c("palegreen3", "goldenrod2", "brown4"))
-title("2015 ground beetle species accumulation")
+mtext("A", side = 3, adj = 0, line = 0.5, cex = 1, font = 2)
 
 # Now for 2022:
-
 forest_2022_accum <- specaccum(comm=forest_2022[carab_species_1st_6], method="random", permutations=100)
 salvaged_2022_accum <- specaccum(comm=salvaged_2022[carab_species_1st_6], method="random", permutations=100)
 windthrow_2022_accum <- specaccum(comm=windthrow_2022[carab_species_1st_6], method="random", permutations=100)
 
 # Make a graph for 2022:
-par(mfrow=c(1,1))
-par(mar=c(5,6,4,2))
-plot(forest_2022_accum, pch = 19, col = "palegreen3", xvar = c("sites"), lty = 4, 
+par(mar=c(4,4,2,1))
+plot(forest_2022_accum, col = "palegreen3", xvar = c("sites"), lty = 4, 
      lwd = 2, ylab = "Species Richness", xlab = "Number of plots", 
-     xlim = c(0, 12), ylim = c(0, 35))
-plot(salvaged_2022_accum, add = TRUE, pch = 15, xvar = c("sites"), lty = 1, 
-     lwd = 2, col = "goldenrod2")
-plot(windthrow_2022_accum, add = TRUE, pch = 4, xvar = c("sites"), lty = 2, 
-     lwd = 2, col = "brown4")
-
-legend("bottomright", legend = c("Forest", "Salvaged", "Windthrow"),
-       pch = c(16, 17, 15, 18), lty = c(1,2,3,4), cex = 0.6, bty = "n", lwd = 5,
+     xlim = c(0, 12), ylim = c(0, 35)) 
+plot(salvaged_2022_accum, add=T, xvar = c("sites"), lty = 1, 
+     lwd = 2, col = "goldenrod2") 
+plot(windthrow_2022_accum, add=T, xvar = c("sites"), lty = 2, 
+     lwd = 2, col = "brown4") 
+legend("bottomright", legend = c("Forest", "Salvaged", "Windthrow"), 
+       lty = c(4,1,2), cex = 0.7, bty = "n", lwd = 2,
        col = c("palegreen3", "goldenrod2", "brown4"))
-title("2022 ground beetle species accumulation")
-
+mtext("B", side = 3, adj = 0, line = 0.5, cex = 1, font = 2)
 
 # Taxonomic alpha-diversity: Chao estimators ###################################
 # still omitting the last two intervals of the 2022 data
@@ -378,6 +376,11 @@ stressplot(nmds)
 g_stdz$NMDS1 <- nmds$points[,1]
 g_stdz$NMDS2 <- nmds$points[,2]
 
+#Try a plot using the method suggested by ChatGPT (hopefully it adds ellipses)
+plot(nmds, type = "n")
+points(nmds, display = "sites", col = g_stdz$Treatment, pch = 19)
+ordiellipse(nmds, group=g_stdz$Treatment, kind = "se", conf = 0.95, label = TRUE)
+
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Year)) + 
   geom_point(size=2)+ coord_fixed()
 
@@ -391,18 +394,22 @@ ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Transect)) +
   geom_point(size=2)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment)) + 
-  geom_point(size=2) + scale_color_manual(values = treatment_colors)+ coord_fixed()
+  geom_point(size=2) + scale_color_manual(values = treatment_colors)+ coord_fixed() +
+  stat_ellipse(level = 0.95)
 
 ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors) + coord_fixed() +
-  theme(legend.position = "none")
+  stat_ellipse(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, group = Treatment), level = 0.95)
 
 taxonomic_NMDS <- ggplot(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, shape=Year, group=Plot)) + 
   geom_point(size=2) + scale_color_manual(values = treatment_colors) +
-  coord_fixed() + scale_x_continuous(limits = c(-1.8,1.8)) + scale_y_continuous(limits = c(-1.8,1.8)) +
+  coord_fixed() + scale_x_continuous(limits = c(-2,2)) + scale_y_continuous(limits = c(-1.8,1.8)) +
   theme(axis.text = element_blank(),
         legend.background = element_rect(color = "black", linewidth = 0.2),
-        legend.box.margin = margin(5, 5, 5, 20))
+        legend.box.margin = margin(5, 5, 5, 20),
+        plot.margin = margin(10,10,10,10)) +
+  stat_ellipse(data=g_stdz, aes(x=NMDS1, y=NMDS2, color=Treatment, group = Treatment), level = 0.95)
+
 taxonomic_NMDS
 
 # Now run the Permutational Multivariate Analysis of Variance (PERMANOVA):
@@ -413,8 +420,8 @@ adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
 # Because the p-value of the adonis2 function is changing each time I run
 # the line of code, I'll need to increase the number of permutations so that 
 # I get a more consistent p-value:
-adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
-        permutations = 99999, by="terms")
+#adonis2(dist_spp_space ~ Treatment * Year, data=g_stdz,
+#        permutations = 99999, by="terms")
 
 # I was initially only going to test for differences between salvaged and windthrow:
 # OUTDATED: Make species abundance matrix for only the windthrow and salvaged plots:
@@ -493,10 +500,11 @@ ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment)
   geom_point(size=2) + scale_color_manual(values = treatment_colors)+ coord_fixed()
 
 ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
-                        shape=Year)) + coord_fixed() + theme(legend.background = element_rect(color = "black",
+                        shape=Year, linetype = Year)) + coord_fixed() + theme(legend.background = element_rect(color = "black",
                                                                                               linewidth = 0.2),
                                                              legend.box.margin = margin(5, 5, 5, 20)) +
-  geom_point(size=2) + scale_color_manual(values = treatment_colors)
+  geom_point(size=2) + scale_color_manual(values = treatment_colors) +
+  stat_ellipse(level = 0.95)
 
 functional_NMDS <- ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, color=Treatment,
                         shape=Year, group=Plot)) + 
@@ -505,11 +513,17 @@ functional_NMDS <- ggplot(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional
   scale_x_continuous(limits = c(-0.18,0.18)) + scale_y_continuous(limits = c(-0.18,0.18)) +
   theme(axis.text = element_blank(),
         legend.background = element_rect(color = "black", linewidth = 0.2),
-        legend.box.margin = margin(5, 5, 5, 20))
+        legend.box.margin = margin(5, 5, 5, 20),
+        plot.margin = margin(10,10,10,10)) +
+  stat_ellipse(data=g_stdz, aes(x=NMDS_functional1, y=NMDS_functional2, 
+                                color=Treatment, group = Treatment), level = 0.95)
+
 functional_NMDS
 
 ggarrange(taxonomic_NMDS, functional_NMDS,
           labels = c("A", "B"), ncol=1, nrow=2)
+
+(taxonomic_NMDS / functional_NMDS) + plot_layout(heights = c(1, 1))
 
 # Now run a PERMANOVA to test the null hypothesis that the centroids of each 
 # treatment group are identical and their dispersions are identical:
