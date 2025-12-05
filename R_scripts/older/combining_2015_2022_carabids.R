@@ -6,6 +6,8 @@
 # ******************THIS SCRIPT NO LONGER WORKS BECAUSE THE SPECIES COLUMNS ARE 
 # NOT MATCHING UP. *********************
 
+#**************************this script is outdated****************************
+
 # Outline:
 # 1. I have a list of species which were either found in 2015 or 2022 in the 
 # plots 41-65

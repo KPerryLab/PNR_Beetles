@@ -669,7 +669,7 @@ plot_model(model_canopy_openness, type="pred", terms=c("Treatment", "Year"))
 
 # Test assumptions:
 plot(model_canopy_openness)
-qqnorm(residuals(model_canopy_openness))
+qqnorm(residuals(model_canopy_openness), add=F)
 qqline(residuals(model_canopy_openness))
 
 # ANOVA test:
@@ -681,6 +681,7 @@ emmeans(model_canopy_openness, pairwise ~ Year | Treatment)
 
 # Abundance richness graph #####################################################
 
+# Reorder the treatments, and designate colors for them:
 dat$Treatment <- factor(dat$Treatment, levels = c("Windthrow", "Salvaged", "Forest"))
 treatment_colors = c("Forest" = "palegreen3", "Salvaged" = "goldenrod2", "Windthrow" = "brown4")
 
@@ -887,11 +888,11 @@ plot(dat$forest_specialist_spp_stdz, dat$eurytopic_spp_stdz + dat$open_habitat_s
 
 # Trait graphs #######################################
 
-body_length_graph <- ggplot(dat, aes(x = Treatment, y = body_length, shape=Year, group = Year, color=Treatment)) + 
+body_length_graph <- ggplot(dat, aes(x = Treatment, y = body_length, shape=Year, group = Year, color=Treatment)) +
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) + guides(color = "none") +
-  ylab("CWM Body \nlength (mm)") + theme(plot.title = element_text(size=18),
+  ylab("CWM \nBody length (mm)") + theme(plot.title = element_text(size=18),
                                    axis.title.x = element_blank(),
                                    axis.title.y = element_text(size = 16, 
                                                                margin = margin(r=20)),
@@ -907,9 +908,9 @@ body_length_graph <- ggplot(dat, aes(x = Treatment, y = body_length, shape=Year,
 body_length_graph
 
 flight_graph <- ggplot(dat, aes(x = Treatment, y = Flight_capability, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   ylab("CWM flight capability") + theme(plot.title = element_text(size=18),
                                               axis.title.x = element_blank(),
                                               axis.title.y = element_text(size = 16, 
@@ -926,10 +927,10 @@ flight_graph <- ggplot(dat, aes(x = Treatment, y = Flight_capability, shape=Year
 flight_graph
 
 eye_length_graph <- ggplot(dat, aes(x = Treatment, y = eye_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
-  ylab("CWM proportional \neye length") + theme(plot.title = element_text(size=18),
+  ylab("CWM \neye length") + theme(plot.title = element_text(size=18),
                                                axis.title.x = element_blank(),
                                                axis.title.y = element_text(size = 16, 
                                                                            margin = margin(r=20)),
@@ -945,9 +946,9 @@ eye_length_graph <- ggplot(dat, aes(x = Treatment, y = eye_length_standard, shap
 eye_length_graph
 
 eye_protrusion_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_standard, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   ylab("Eye protrusion:\nbody length") + theme(plot.title = element_text(size=18),
                                            axis.title.x = element_blank(),
                                            axis.title.y = element_text(size = 16, 
@@ -964,9 +965,9 @@ eye_protrusion_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_standa
 eye_protrusion_graph
 
 eye_protrusion_ratio_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_ratio, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   scale_y_continuous(breaks = seq(1,1.2,0.02)) +
   ylab("Eye protrusion:\neye length") + theme(plot.title = element_text(size=18),
                                               axis.title.x = element_blank(),
@@ -980,10 +981,10 @@ eye_protrusion_ratio_graph <- ggplot(dat, aes(x = Treatment, y = eye_protrusion_
 eye_protrusion_ratio_graph
 
 trochanter_graph <- ggplot(dat, aes(x = Treatment, y = rear_trochanter_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
-  ylab("CWM proportional \nrear trochanter length") + theme(plot.title = element_text(size=18),
+  ylab("CWM \nrear trochanter length") + theme(plot.title = element_text(size=18),
                                                axis.title.x = element_blank(),
                                                axis.title.y = element_text(size = 16, 
                                                                            margin = margin(r=20)),
@@ -999,10 +1000,10 @@ trochanter_graph <- ggplot(dat, aes(x = Treatment, y = rear_trochanter_length_st
 trochanter_graph
 
 antenna_graph <- ggplot(dat, aes(x = Treatment, y = antenna_length_standard, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
-  ylab("CWM proportional \nantenna length") + theme(plot.title = element_text(size=18),
+  ylab("CWM \nantenna length") + theme(plot.title = element_text(size=18),
                                                  axis.title.x = element_blank(),
                                                  axis.title.y = element_text(size = 16, 
                                                                              margin = margin(r=20)),
@@ -1018,9 +1019,9 @@ antenna_graph <- ggplot(dat, aes(x = Treatment, y = antenna_length_standard, sha
 antenna_graph
 
 water_graph <- ggplot(dat, aes(x = Treatment, y = Water_affinity, shape=Year, group = Year, color=Treatment)) + 
+  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   stat_summary(fun = mean, geom = "point", color="black", position = position_dodge(width = 0.9), size=2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2, position = position_dodge(width = 0.9), color="black") +
-  geom_quasirandom(alpha=0.8, dodge.width = 0.9, width = 0.05, size=2) +guides(color = "none") +
   ylab("CWM water affinity") + theme(plot.title = element_text(size=18),
                                       axis.title.x = element_blank(),
                                       axis.title.y = element_text(size = 16, margin = margin(r=20)),
